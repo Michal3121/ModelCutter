@@ -23,13 +23,12 @@ import javax.vecmath.Point3f;
  */
 public class Aplication {
     
-    
-    public Collection<Long> getTriangleRings(Model model, Plane plane){
+    public Collection<Long> getAllIntersectionTriangles(Model model, Plane plane){
         Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
         Map<Long, MVertex> triangleVertices = model.getVertices(); 
         Set<Point3f> ring = new HashSet<>(); 
         Set<Long> intersectionTriangles = new HashSet<>();
-        int aux = 0;
+        int pocetPretnuti = 0;
         int pocetPrechodov = 0;
         
         for(long triangleID: triangleMesh.keySet()){
@@ -39,90 +38,107 @@ public class Aplication {
                 Point3f vertex1 = triangleVertices.get(verticesIDs[k]).getVertex();
                 Point3f vertex2 = triangleVertices.get(verticesIDs[(k+1) % 3]).getVertex();
                 
-                //System.out.println("krok " + k + " vertex1 " + vertex1.toString());
-                //System.out.println("krok " + (k+1) % 3 + " vertex2 " + vertex2.toString());
-                
                 pocetPrechodov++;
                 if(plane.isIntersecting(vertex1, vertex2)){
                     ring.add(vertex1);
                     ring.add(vertex2);
+                    triangleMesh.get(triangleID).setIntersecting(true);  
                     intersectionTriangles.add(triangleID);
-                    aux++;
-                    
-                    //System.out.println("Pretla");
-                    //System.out.println("Vrchol 1" + vertex1.toString());
-                    //System.out.println("Vrchol 2" + vertex2.toString());
+                    pocetPretnuti++;
                 }
             }
-            //System.out.println("------------------------------------------------------");
         }  
-        
-        System.out.println("Rovina pretla model: " + aux);
-        System.out.println("Pocet prechodov: " + pocetPrechodov);
-        System.out.println("Pocet trojuholnikov: " + intersectionTriangles.size());
         return Collections.unmodifiableCollection(intersectionTriangles);
     }
     
-    public void getListsOfParts(Set<Long> triangleRing, Model model){
-        List<Long> triangleList = new ArrayList<>(triangleRing);
+    public List<List<Long>> getListsOfParts(Set<Long> allIntersectingTriangles, Model model){
+        List<Long> triangleList = new ArrayList<>(allIntersectingTriangles);
         Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
-        Map<Long, MVertex> triangleVertices = model.getVertices(); 
-        long nextTriangle;
-        List<List<Long>> parts = new ArrayList<>();
+        long nextTriangleID = -1;
+        long firstTriangleInCurrentRing = -1;
+        List<List<Long>> allParts = new ArrayList<>(); // list vsetkych ringov 
+        List<Long> onePart = new ArrayList<>(); 
+        boolean hasAdjacentTriangle = false;
         
-        if(!triangleRing.isEmpty()){
-            nextTriangle = triangleList.get(0);
-            parts.add(new ArrayList<Long>());
-            parts.get(0).add(nextTriangle);
-            triangleRing.remove(nextTriangle);
-        }else{
-            return;
-        }
-        
-        while(!triangleRing.isEmpty()){
-            for(int j = 1; j < triangleRing.size(); j++){
-                long[] adjacentTriangleIDs = triangleMesh.get(nextTriangle).getTriangleVertices();
-
-                for(int i = 0; i < 3; i++){
-                    if (triangleRing.contains(adjacentTriangleIDs[i])){
-                        nextTriangle = adjacentTriangleIDs[i];
-                        //part.add(nextTriangle);
-                        triangleRing.remove(nextTriangle);
-                        return;
+        while(!triangleList.isEmpty())
+        {
+            /*
+            if(firstTriangleInCurrentRing == nextTriangleID && firstTriangleInCurrentRing != -1){
+                allParts.add(onePart);
+                onePart = new ArrayList<>();
+                firstTriangleInCurrentRing = -1;
+            }*/
+           
+            if(firstTriangleInCurrentRing == -1){ 
+                nextTriangleID = triangleList.get(0);
+                firstTriangleInCurrentRing = nextTriangleID;
+                onePart.add(nextTriangleID); 
+                triangleList.remove(nextTriangleID);
+            }
+            
+            //for(int j = 0; j < allIntersectingTriangles.size(); j++){
+            do{
+                
+                long[] adjacentTriangleIDs = triangleMesh.get(nextTriangleID).getAdjacentTriangles(); // vyberieme vsetky susedne trojuholnikz
+                hasAdjacentTriangle = false;
+                
+                
+                for(int i = 0; i < 3; i++){ // najdeme susedny trojuholnik v ringu
+                    if (triangleList.contains(adjacentTriangleIDs[i])){
+                        nextTriangleID = adjacentTriangleIDs[i];
+                        onePart.add(nextTriangleID);
+                        triangleList.remove(nextTriangleID);
+                        hasAdjacentTriangle = true;
+                        break;
                     } 
                 }
-            }
-        }
-        
-        List<Long> currentPart;
-        
-        while(!triangleRing.isEmpty()){
-            
-            boolean inOnePart = true;
-            while(inOnePart){
-                inOnePart = false;
-                long[] adjacentTriangleIDs = triangleMesh.get(nextTriangle).getTriangleVertices();
-
-                for(int i = 0; i < 3; i++){
-                    if (triangleRing.contains(adjacentTriangleIDs[i])){
-                        nextTriangle = adjacentTriangleIDs[i];
-                        currentPart = parts.get(parts.size()-1); // vyberieme posledny zoznam
-                        currentPart.add(nextTriangle);
-                        triangleRing.remove(nextTriangle);
-                        inOnePart = true;
+                if(!hasAdjacentTriangle){
+                    for(int i = 0; i < 3; i++){
+                        if(firstTriangleInCurrentRing == adjacentTriangleIDs[i]){
+                                allParts.add(new ArrayList<>(onePart));
+                                onePart = new ArrayList<>();
+                                nextTriangleID = firstTriangleInCurrentRing;
+                                //firstTriangleInCurrentRing = -1;
+                        }
                     }
                 }
-            }
+                
+                
+                
+            }while(nextTriangleID != firstTriangleInCurrentRing) ;   
             
-            if(inOnePart == false && !triangleRing.isEmpty()){
-                parts.add(new ArrayList<Long>());
-                nextTriangle = triangleRing.iterator().next();
-            }      
-        }
+            firstTriangleInCurrentRing = -1;
+        }  
         
+        return allParts;
     }
     
-    
+    public void cutModel(List<List<Long>> listsOfParts,  Model model, Plane plane){
+        Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
+        Map<Long, MVertex> triangleVertices = model.getVertices(); 
+        
+        for(List<Long> item : listsOfParts)
+        {
+            for(int i = 0; i < item.size(); i++)
+            {
+                long[] verticesIDs = triangleMesh.get(item.get(i)).getTriangleVertices();
+                List<Point3f> triangleVertWithIntersections = new ArrayList<>();
+                
+                for(int k = 0; k < 3; k++)
+                {
+                    Point3f vertex1 = triangleVertices.get(verticesIDs[k]).getVertex();
+                    Point3f vertex2 = triangleVertices.get(verticesIDs[(k+1) % 3]).getVertex();
+                    
+                    triangleVertWithIntersections.add(vertex1);
+                    if(plane.isIntersecting(vertex1, vertex2))
+                    {
+                        triangleVertWithIntersections.add(plane.getIntersectionPoint(vertex1, vertex2));
+                    }
+                }
+                
+            }
+        }
+    }
     
     //----//
     public void getRing(Model model, Plane plane){
@@ -149,6 +165,20 @@ public class Aplication {
             
             
         }
+    }
+    
+    private boolean IsPointInPolygon(Point3f point, List<Long> polygon, Model model)
+    {
+        boolean inside = false;
+        Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
+        
+        int j = polygon.size() - 1;
+        for(int i = 0; i < polygon.size(); i++){
+            
+        }
+        
+        
+        return false;
     }
     
     

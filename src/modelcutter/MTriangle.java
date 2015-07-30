@@ -18,12 +18,14 @@ public class MTriangle {
     private Point3f triangleNormal;
     private long[] triangleVertices = new long[3];
     private long[] adjacentTriangles = new long[3];
+    private boolean intersecting;
 
     public MTriangle(long triangleID, long objectID, Point3f norm, long[] triangleVertices) {
         this.triangleID = triangleID;
         this.objectID = objectID;
         this.triangleNormal = norm;
         this.triangleVertices = triangleVertices;
+        this.intersecting = false;
     }
 
     public long getTriangleID() {
@@ -62,6 +64,14 @@ public class MTriangle {
         this.adjacentTriangles = adjacentTriangles;
     }
 
+    public boolean isIntersecting() {
+        return intersecting;
+    }
+
+    public void setIntersecting(boolean isIntersecting) {
+        this.intersecting = isIntersecting;
+    }
+    
     @Override
     public String toString() {
         return String.format("Triangle ID: %d; vertices IDs: %s; adjacent triangles: %s ", 

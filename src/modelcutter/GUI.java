@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javax.imageio.ImageIO;
 import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.GLProfile;
@@ -390,6 +391,8 @@ public class GUI extends javax.swing.JFrame {
 
     private void cutButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cutButtonActionPerformed
         List<Point3f> ringList = new ArrayList<>();
+        Set<Long> intersectionTriangles = new HashSet<>();
+        List<List<Long>> allParts;
         
         float planeX = this.modelWithMap.getModelCenter().x;
         float planeY = this.modelWithMap.getModelCenter().y;
@@ -398,6 +401,11 @@ public class GUI extends javax.swing.JFrame {
         Point3f planeCenter = new Point3f(planeX, planeY, planeZ);
         
         Plane plane = new Plane(planeCenter);
+        intersectionTriangles.addAll(app.getAllIntersectionTriangles(modelWithMap, plane));
+        allParts = app.getListsOfParts(intersectionTriangles, modelWithMap);
+        renderer = new Renderer(models);
+        glCanvas.addGLEventListener(renderer);
+        
         System.out.println("Center 2 Cube" + this.modelWithMap.getModelCenter());
         System.out.println("Center Cube" + this.modelWithMap.getModelCenter());
         

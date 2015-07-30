@@ -71,6 +71,48 @@ public class Plane {
         return sgn1 != sgn2;
     }
     
+    public Point3f getIntersectionPoint(Point3f coord1, Point3f coord2)
+    {
+        Vector3d normalVec = new Vector3d(this.normal.x, this.normal.y, this.normal.z);
+        Vector3d centerVec = new Vector3d(this.centerPoint.x, this.centerPoint.y, this.centerPoint.z);
+        Vector3d coord1Vec = new Vector3d(coord1.x, coord1.y, coord1.z);
+        Vector3d coord2Vec = new Vector3d(coord2.x, coord2.y, coord2.z);
+        
+        double distance = normalVec.dot(centerVec);
+        double dotProduct1 = normalVec.dot(coord1Vec);
+        double dotProduct2 = normalVec.dot(coord2Vec);
+        
+        double fraction = ((dotProduct1 + distance) / (dotProduct2 - dotProduct1));
+        
+        coord1Vec.scale(fraction);
+        coord2Vec.scale(fraction);
+        coord1Vec.sub(coord2Vec);
+        
+        return new Point3f((float) coord1Vec.x, (float) coord2Vec.y, (float) coord1Vec.z);
+    }       
+    
+    public int belongToPlane(Point3f coord)
+    {
+        Vector3d normalVec = new Vector3d(this.normal.x, this.normal.y, this.normal.z);
+        Vector3d centerVec = new Vector3d(this.centerPoint.x, this.centerPoint.y, this.centerPoint.z);
+        Vector3d coordVec = new Vector3d(coord.x, coord.y, coord.z);
+        
+        double distance = normalVec.dot(centerVec);
+        double ret = coordVec.dot(coordVec) - distance; 
+        
+       if(((double) Math.round(ret * 1000) / 1000) == 0.0)
+       {
+           return 0;
+       }
+       
+       if(ret < 0)
+       {
+           return -1;
+       }
+       
+       return 1;
+    }
+    
     /*
     public Point3f getCorner(){
         Vector3d normalVec = new Vector3d(normal.x, normal.y, normal.z);

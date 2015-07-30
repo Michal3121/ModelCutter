@@ -1,4 +1,4 @@
-/*
+ /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
@@ -83,7 +83,7 @@ public class Renderer  implements GLEventListener {
     private Vector3d vector1;
     private Vector3d vector2;
     private List<Model> listOfModels;
-    private List<Point3f> ringList= new ArrayList<>();
+    private List<Point3f> ringList = new ArrayList<>();
     private Plane plane;
     
     
@@ -509,6 +509,15 @@ public class Renderer  implements GLEventListener {
             Point3f vertex0 = vertices.get(verticesKeys[0]).getVertex();
             Point3f vertex1 = vertices.get(verticesKeys[1]).getVertex();
             Point3f vertex2 = vertices.get(verticesKeys[2]).getVertex();
+            
+            if(currentTriangle.isIntersecting())
+            {
+                gl.glColor3f(1, 0, 0);
+            }
+            else
+            {
+                gl.glColor3f(0, 1, 0);
+            }
             
             gl.glBegin(GL_TRIANGLES);
             gl.glNormal3f(normal.x, normal.y, normal.z);
