@@ -77,7 +77,7 @@ public class ModelManagerImpl implements ModelManager {
                         vertexID++;
                     }else{
                         long auxIndex = auxVerticesMap.get(triangleVertices[i]);
-                        triangleVerticesID[i] = auxIndex;
+                        triangleVerticesID[i] = auxIndex; // index trojuholnikov 
                         this.verticesMap.get(auxIndex).addAdjacentTriangles(triangleID);
                     }
                 }
@@ -103,21 +103,21 @@ public class ModelManagerImpl implements ModelManager {
         for(long triangleID : this.triangleMap.keySet()){
             MTriangle currentTriangle = this.triangleMap.get(triangleID);
             long[] verticesIDs = currentTriangle.getTriangleVertices();
-            long[] adjacentTriangles = new long[3];
+            List<Long> adjacentTriangles = new ArrayList<>();
             
             for(int k = 0; k < 3; k++){
-                List<Long> vertex1 = this.verticesMap.get(verticesIDs[k]).getAdjacentTriangles();
+                List<Long> vertex1 = this.verticesMap.get(verticesIDs[k]).getAdjacentTriangles(); // ziskame prilahle trojuholniky
                 List<Long> vertex2 = this.verticesMap.get(verticesIDs[(k+1) % 3]).getAdjacentTriangles();
                 
-                Set<Long> vertex1aux = new HashSet<>(vertex1);
+                Set<Long> vertex1aux = new HashSet<>(vertex1); // dame do pomocnej mnoziny
                 Set<Long> vertex2aux = new HashSet<>(vertex2);
                 
-                vertex1aux.retainAll(vertex2aux);
-                vertex1aux.remove(triangleID);
+                vertex1aux.retainAll(vertex2aux); // vo vertex1aux zostanu len spolocne prvky s vertex2aux (dva trojuholniky)
+                vertex1aux.remove(triangleID); // odstranime trojuholnik, ktory prave prehladavame
                 
                 if(vertex1aux.size() == 1){
                     //System.out.println("Adjacent pridavam");
-                    adjacentTriangles[k] = vertex1aux.iterator().next();
+                    adjacentTriangles.add(vertex1aux.iterator().next()); //pridame prilahlz trojuholnik
                 }else{
                     System.out.println("Chyba///////////////////////////////");
                     aux++;

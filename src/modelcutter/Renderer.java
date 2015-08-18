@@ -358,7 +358,7 @@ public class Renderer  implements GLEventListener {
         gl.glCallList(1); 
         gl.glPopMatrix();
         
-        this.drawRing(gl);
+        //this.drawRing(gl);
         
         
         gl.glColor3f(1.0f, 1.0f, 1.0f);
@@ -513,6 +513,14 @@ public class Renderer  implements GLEventListener {
             if(currentTriangle.isIntersecting())
             {
                 gl.glColor3f(1, 0, 0);
+            }
+            else if(currentTriangle.getObjectID() == 1)
+            {
+                gl.glColor3f(0, 1, 0);
+            }
+            else if(currentTriangle.getObjectID() == 2)
+            {
+                gl.glColor3f(0, 0, 1);
             }
             else
             {

@@ -5,7 +5,9 @@
  */
 package modelcutter;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import javax.vecmath.Point3f;
 
 /**
@@ -17,7 +19,7 @@ public class MTriangle {
     private long objectID;
     private Point3f triangleNormal;
     private long[] triangleVertices = new long[3];
-    private long[] adjacentTriangles = new long[3];
+    private List<Long> adjacentTriangles;
     private boolean intersecting;
 
     public MTriangle(long triangleID, long objectID, Point3f norm, long[] triangleVertices) {
@@ -26,6 +28,7 @@ public class MTriangle {
         this.triangleNormal = norm;
         this.triangleVertices = triangleVertices;
         this.intersecting = false;
+        this.adjacentTriangles = new ArrayList<>();
     }
 
     public long getTriangleID() {
@@ -56,11 +59,11 @@ public class MTriangle {
         this.triangleVertices = triangleVertices;
     }
 
-    public long[] getAdjacentTriangles() {
+    public List<Long> getAdjacentTriangles() {
         return adjacentTriangles;
     }
 
-    public void setAdjacentTriangles(long[] adjacentTriangles) {
+    public void setAdjacentTriangles(List<Long> adjacentTriangles) { //POZOR na spravne vlozenie
         this.adjacentTriangles = adjacentTriangles;
     }
 
@@ -72,10 +75,19 @@ public class MTriangle {
         this.intersecting = isIntersecting;
     }
     
+    public Boolean deleteAdjacentTriangleID(long id){
+        
+        if(this.adjacentTriangles.contains(id)){ // Ceknut remove
+            this.adjacentTriangles.remove(id);
+            return true;
+        }
+        return false;   
+    }
+    
     @Override
     public String toString() {
         return String.format("Triangle ID: %d; vertices IDs: %s; adjacent triangles: %s ", 
                             this.triangleID, Arrays.toString(this.triangleVertices), 
-                            Arrays.toString(this.adjacentTriangles));
+                            this.adjacentTriangles.toString());
     }
 }

@@ -80,7 +80,21 @@ public class Model {
         }
     }
     
-     
+    public void deleteTriangleAndUpdateModel(long triangleToDeleteID){
+        MTriangle triangleToDelete = this.triangleMesh.get(triangleToDeleteID);
+        long[] triangleVerticesID = triangleToDelete.getTriangleVertices();
+        List<Long> adjacentTriangleList = triangleToDelete.getAdjacentTriangles();
+        
+        for(int i = 0; i < adjacentTriangleList.size(); i++){
+            this.triangleMesh.get(adjacentTriangleList.get(i)).deleteAdjacentTriangleID(triangleToDeleteID);
+        }
+        
+        for(int i = 0; i < 3; i++){
+            this.vertices.get(triangleVerticesID[i]).deleteAdjacentTriangleID(triangleToDeleteID);
+        }
+        
+        this.triangleMesh.remove(triangleToDeleteID);
+    }
     
     public double getSizeX(){
         return this.sizeXmax - this.sizeXmin;

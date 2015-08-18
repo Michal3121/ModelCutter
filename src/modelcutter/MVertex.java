@@ -26,6 +26,12 @@ public class MVertex {
         this.adjacentTriangles.add(triangleID);
     }
     
+    public MVertex(long id, long objectID, Point3f vertex){
+        this.vertexID = id;
+        this.objectID = objectID;
+        this.vertex = vertex;
+    }
+    
     public long getVertexID() {
         return vertexID;
     }
@@ -56,6 +62,15 @@ public class MVertex {
     
     public void addAdjacentTriangles(long triangleID){
         this.adjacentTriangles.add(triangleID);
+    }
+    
+    public Boolean deleteAdjacentTriangleID(long id){
+        
+        if(this.adjacentTriangles.contains(id)){ // Ceknut remove
+            this.adjacentTriangles.remove(id);
+            return true;
+        }
+        return false;   
     }
 
     @Override

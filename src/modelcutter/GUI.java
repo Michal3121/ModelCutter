@@ -403,7 +403,32 @@ public class GUI extends javax.swing.JFrame {
         Plane plane = new Plane(planeCenter);
         intersectionTriangles.addAll(app.getAllIntersectionTriangles(modelWithMap, plane));
         allParts = app.getListsOfParts(intersectionTriangles, modelWithMap);
+        app.getDividedTriangleFromRing(allParts, modelWithMap, plane);
         renderer = new Renderer(models);
+        
+        /////////////////////////////
+        JFileChooser savingChooser = new JFileChooser(); 
+                FileNameExtensionFilter stl = new FileNameExtensionFilter("STL Files (*.stl;*.STL)", "stl", "STL");
+                
+                savingChooser.addChoosableFileFilter(stl);   
+                savingChooser.setFileFilter(stl);
+                
+                int saveValue = savingChooser.showSaveDialog(null);
+                
+                if(saveValue == JFileChooser.CANCEL_OPTION){
+                    return;
+                }
+                
+                if(saveValue == JFileChooser.APPROVE_OPTION){
+                    
+                    System.out.println("Cesta " + savingChooser.getSelectedFile().getAbsolutePath());
+                    modelManager.exportModel(new File(savingChooser.getSelectedFile().getAbsolutePath() + ".stl"), models.get(0));
+                
+                }
+        
+        
+        ////////////////////////////
+        
         glCanvas.addGLEventListener(renderer);
         
         System.out.println("Center 2 Cube" + this.modelWithMap.getModelCenter());
