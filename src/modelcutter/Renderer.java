@@ -522,6 +522,18 @@ public class Renderer  implements GLEventListener {
             {
                 gl.glColor3f(0, 0, 1);
             }
+            else if(currentTriangle.getObjectID() == 3)
+            {
+                gl.glColor3f(1, 1, 0);
+            }
+            else if(currentTriangle.getObjectID() == 4)
+            {
+                gl.glColor3f(1, 0, 1);
+            }
+            else if(currentTriangle.getObjectID() == 5)
+            {
+                gl.glColor3f(0, 1, 1);
+            }
             else
             {
                 gl.glColor3f(0, 1, 0);

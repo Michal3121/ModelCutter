@@ -27,7 +27,8 @@ public class Plane {
 
     public Plane(Point3f centerPoint) {
         this.centerPoint = centerPoint;
-        this.normal = new Point3f(1.0f, -1.0f, 0.0f);
+        //this.normal = new Point3f(1.0f, -1.0f, 0.0f);
+        this.normal = new Point3f(0.0f, 1.0f, 0.0f);
     }
 
     public Point3f getCenterPoint() {
@@ -47,7 +48,7 @@ public class Plane {
     }
     
     public boolean isIntersecting(Point3f coord1, Point3f coord2){
-         
+        
         Vector3d normalVec = new Vector3d(this.normal.x, this.normal.y, this.normal.z);
         Vector3d centerVec = new Vector3d(this.centerPoint.x, this.centerPoint.y, this.centerPoint.z);
         Vector3d coord1Vec = new Vector3d(coord1.x, coord1.y, coord1.z);
@@ -61,6 +62,7 @@ public class Plane {
         if(coord1Vec.y == centerVec.y || coord2Vec.y == centerVec.y){
             System.out.println("Distance == 0");
         }
+        
         
         
             
@@ -130,7 +132,7 @@ public class Plane {
         return new Point3f((float) coord1Vec.x, (float) coord1Vec.y, (float) coord1Vec.z);
     }       
     
-    public int belongToPlane(Point3f coord)
+    public Boolean belongToPlane(Point3f coord)
     {
         Vector3d normalVec = new Vector3d(this.normal.x, this.normal.y, this.normal.z);
         Vector3d centerVec = new Vector3d(this.centerPoint.x, this.centerPoint.y, this.centerPoint.z);
@@ -139,17 +141,9 @@ public class Plane {
         double distance = normalVec.dot(centerVec);
         double ret = normalVec.dot(coordVec) - distance; 
         
-       if(((double) Math.round(ret * 1000) / 1000) == 0.0)
-       {
-           return 0;
-       }
-       
-       if(ret < 0)
-       {
-           return -1;
-       }
-       
-       return 1;
+       //return ((double) Math.round(ret * 10000) / 10000) == 0.0; 
+       return ((double) Math.round(ret * 1000) / 1000) == 0.0;
+       //return ((double) Math.round(ret * 100) / 100) == 0.0;
     }
     
     /*
