@@ -15,7 +15,6 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -36,14 +35,12 @@ public class ModelManagerImpl implements ModelManager {
     private STLFileReader reader;
     private final double[] normal; // kvoli vynimkam atribut
     private final double[][] vertex; // kvoli vynimkam atribut
-    //private final List<ModelFacet> mesh;
-    private Map<Long, MTriangle> triangleMap; 
-    private Map<Long, MVertex> verticesMap; 
+    private final Map<Long, MTriangle> triangleMap; 
+    private final Map<Long, MVertex> verticesMap; 
     
     public ModelManagerImpl(){
         normal = new double[3];
         vertex = new double[3][3];
-        //mesh = new ArrayList<>();
         triangleMap = new HashMap<>();
         verticesMap = new HashMap<>();
     }
@@ -89,44 +86,41 @@ public class ModelManagerImpl implements ModelManager {
         } catch (InvalidFormatException | IOException ex) {
             Logger.getLogger(ModelManagerImpl.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
-        this.initAdjacentTriangles();
+           
         System.out.println("Trojuholniky = " + this.triangleMap.keySet().size());
         System.out.println("Vrcholy = " + this.verticesMap.keySet().size());
-        System.out.println(this.triangleMap.get(2l).toString());
-        System.out.println(this.verticesMap.get(2l).toString());
-        return new Model(verticesMap, triangleMap);
+        return this.updateAdjacentTriangles(new Model(verticesMap, triangleMap));
     }
     
-    private void initAdjacentTriangles(){
-        int aux = 0;
-        for(long triangleID : this.triangleMap.keySet()){
-            MTriangle currentTriangle = this.triangleMap.get(triangleID);
+    public Model updateAdjacentTriangles(Model model){
+        Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
+        Map<Long, MVertex> triangleVertices = model.getVertices();
+        
+        for(long triangleID : triangleMesh.keySet()){
+            MTriangle currentTriangle = triangleMesh.get(triangleID);
             long[] verticesIDs = currentTriangle.getTriangleVertices();
             List<Long> adjacentTriangles = new ArrayList<>();
             
-            for(int k = 0; k < 3; k++){
-                List<Long> vertex1 = this.verticesMap.get(verticesIDs[k]).getAdjacentTriangles(); // ziskame prilahle trojuholniky
-                List<Long> vertex2 = this.verticesMap.get(verticesIDs[(k+1) % 3]).getAdjacentTriangles();
-                
-                Set<Long> vertex1aux = new HashSet<>(vertex1); // dame do pomocnej mnoziny
-                Set<Long> vertex2aux = new HashSet<>(vertex2);
+            for(int k = 0; k < 3; k++)
+            {
+                MVertex vertex1 = triangleVertices.get(verticesIDs[k]);
+                MVertex vertex2 = triangleVertices.get(verticesIDs[(k+1) % 3]);
+        
+                Set<Long> vertex1aux = new HashSet<>(vertex1.getAdjacentTriangles()); // prilahle trojuholniky dame do pomocnej mnoziny
+                Set<Long> vertex2aux = new HashSet<>(vertex2.getAdjacentTriangles());
                 
                 vertex1aux.retainAll(vertex2aux); // vo vertex1aux zostanu len spolocne prvky s vertex2aux (dva trojuholniky)
                 vertex1aux.remove(triangleID); // odstranime trojuholnik, ktory prave prehladavame
                 
                 if(vertex1aux.size() == 1){
-                    //System.out.println("Adjacent pridavam");
-                    adjacentTriangles.add(vertex1aux.iterator().next()); //pridame prilahlz trojuholnik
+                    adjacentTriangles.add(vertex1aux.iterator().next()); //pridame prilahly trojuholnik
                 }else{
                     System.out.println("Chyba///////////////////////////////");
-                    aux++;
                 }
             }
-            
-            this.triangleMap.get(triangleID).setAdjacentTriangles(adjacentTriangles);      
+            triangleMesh.get(triangleID).setAdjacentTriangles(adjacentTriangles);      
         }
-        System.out.println("Pocet chybnych " + aux);
+        return model;
     }       
     
     private Point3f[] transformVerticesToPoint3f(double[][] vertices)
@@ -191,63 +185,10 @@ public class ModelManagerImpl implements ModelManager {
         return listOfFacetsSCAD;
     }
     
-    
     /*
     @Override
     public void updateModel(Model model) {
         
-    }
-    */
-    /*
-    public Model loadModel2(File path) {
-        
-        try {
-            reader = new STLFileReader(path);
-        } catch (InvalidFormatException | IOException ex) {
-            Logger.getLogger(Model.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        
-        try {
-            while(reader.getNextFacet(normal, vertex)){
-                Coordinate triangleNorm = new Coordinate(normal[0], normal[1], normal[2]); 
-                Coordinate triangleCoord0 = new Coordinate(vertex[0][0], vertex[0][1], vertex[0][2]);
-                Coordinate triangleCoord1 = new Coordinate(vertex[1][0], vertex[1][1], vertex[1][2]);
-                Coordinate triangleCoord2 = new Coordinate(vertex[2][0], vertex[2][1], vertex[2][2]);
-                
-                Triangle triangle = new Triangle(triangleCoord0, triangleCoord1, triangleCoord2);
-                mesh.add(new ModelFacet(triangle, triangleNorm));
-            }
-        } catch (InvalidFormatException | IOException ex) {
-            Logger.getLogger(Model.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        
-        System.out.println("load list size" + mesh.size());
-        
-        return new Model(mesh);
-    }
-    */
-    /*
-    private List<Facet> facetTransformer(Model model){
-        List<Facet> listOfFacetsSCAD = new ArrayList<>();  
-        
-        for(int i = 0; i < model.getNumberOfFacet(); i++)
-        {
-            ModelFacet triangle = model.getFacet(i);
-                
-            Coords3d coordSCAD_0 = new Coords3d(triangle.getTriangleCoord0().x, triangle.getTriangleCoord0().y, triangle.getTriangleCoord0().z);
-            Coords3d coordSCAD_1 = new Coords3d(triangle.getTriangleCoord1().x, triangle.getTriangleCoord1().y, triangle.getTriangleCoord1().z);
-            Coords3d coordSCAD_2 = new Coords3d(triangle.getTriangleCoord2().x, triangle.getTriangleCoord2().y, triangle.getTriangleCoord2().z);
-                
-            Coords3d normalSCAD = new Coords3d(triangle.getNormal().x, triangle.getNormal().y, triangle.getNormal().z);
-            
-            Triangle3d triangleSCAD = new Triangle3d(coordSCAD_0, coordSCAD_1, coordSCAD_2); 
-            
-            Facet facetSCAD = new Facet(triangleSCAD, normalSCAD, Color.lightGray); 
-            
-            listOfFacetsSCAD.add(facetSCAD);
-        }
-        
-        return listOfFacetsSCAD;
     }
     */
 }

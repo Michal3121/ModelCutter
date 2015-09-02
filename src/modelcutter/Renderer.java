@@ -266,15 +266,6 @@ public class Renderer  implements GLEventListener {
         //gl.glScalef(0.04f,0.04f,0.04f);
         
         //liver.loadModel();
-        /*
-        try {
-            drawModel(new File(getClass().getResource("/models/Computer3.stl").toURI()),gl);
-        } catch (URISyntaxException ex) {
-            Logger.getLogger(Renderer.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        */
-        
-        
         
         if(!listOfModels.isEmpty()){
             
@@ -302,9 +293,8 @@ public class Renderer  implements GLEventListener {
                 System.out.println("z:" + listOfModels.get(i).getSizeZ());
                 
                 gl.glTranslated(- translatedX, - translatedY,  - translatedZ);
-                //drawModel(listOfModels.get(i), gl);
                 
-                drawModel2(listOfModels.get(i), gl);
+                drawModel(listOfModels.get(i), gl);
                 //gl.glTranslated(- translatedX, 0,  0);
                 System.out.println("kreslime!");
             }
@@ -463,38 +453,10 @@ public class Renderer  implements GLEventListener {
         //glu.gluPerspective(45, width/(float)height, 1, 50); 
         glu.gluPerspective(45, width/(float)height, 0.1, 50);
         gl.glMatrixMode(GL_MODELVIEW); 
-        
-        
-         
+            
     }
     
-    public void drawModel(Model model, GL2 gl){
-        
-        double maxX;
-        double minY;
-        
-        //Model model = new Model(path);
-        //model.loadModel();
-        //Model model = listOfModels.get(1);
-        
-        maxX = model.getFacet(0).getTriangleCoord0().x;
-        
-        for(int i=0; i<model.getNumberOfFacet(); i++){
-            ModelFacet triangle =  model.getFacet(i);
-            Coordinate n = triangle.getNormal();
-            
-            
-            gl.glBegin(GL_TRIANGLES);
-            gl.glNormal3d(n.x, n.y, n.z);
-            gl.glVertex3d(triangle.getTriangleCoord0().x, triangle.getTriangleCoord0().y, triangle.getTriangleCoord0().z);
-            gl.glVertex3d(triangle.getTriangleCoord1().x, triangle.getTriangleCoord1().y, triangle.getTriangleCoord1().z);
-            gl.glVertex3d(triangle.getTriangleCoord2().x, triangle.getTriangleCoord2().y, triangle.getTriangleCoord2().z);
-            gl.glEnd();
-            
-        }
-    }
-    
-    public void drawModel2(Model model, GL2 gl)
+    public void drawModel(Model model, GL2 gl)
     {
         HashMap<Long, MVertex> vertices = new HashMap<>(model.getVertices());
         HashMap<Long, MTriangle> triangles = new HashMap<>(model.getTriangleMesh());

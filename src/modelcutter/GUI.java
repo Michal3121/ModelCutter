@@ -54,10 +54,6 @@ public class GUI extends javax.swing.JFrame {
     private static final int FPS = 60; //60
     private Aplication app;
     
-    private HashSet<Intersections> set = new HashSet<Intersections>();
-    private Intersections i1;
-    private Intersections i2;
-    
     private ModelManagerImpl modelManager;
     private List<Model> models;
     private Model modelWithMap;
@@ -189,15 +185,6 @@ public class GUI extends javax.swing.JFrame {
         //glPanel.addKeyListener(openGlJPanel);
         glCanvas.requestFocusInWindow();
         
-        
-        i1 = new Intersections(new Coordinate(0.0,0.0,0.0), new Coordinate(1.0,1.0,0.0));
-        i2 = new Intersections(new Coordinate(0.0,0.0,0.0), new Coordinate(1.0,1.0,0.0));
-        System.out.println(i1.toString()); 
-        
-        set.add(i1);
-        set.add(i2);
-        
-        System.out.println("Set ma " + set.size() + " prvkov");
     }
     
     private void initMenu(){
@@ -264,7 +251,7 @@ public class GUI extends javax.swing.JFrame {
         
                     Plane plane = new Plane(planeCenter);
                     
-                    app.setComponent(modelWithMap);
+                    //app.setComponent(modelWithMap);
                     
                     renderer.setPlane(plane);
                 }     
@@ -405,32 +392,12 @@ public class GUI extends javax.swing.JFrame {
         Plane plane = new Plane(planeCenter);
         //app.setComponent(modelWithMap);
         intersectionTriangles.addAll(app.getAllIntersectionTriangles(modelWithMap, plane));
-        app.divideTriangles(intersectionTriangles, modelWithMap, plane);
+        app.divideIntersectingTriangles(intersectionTriangles, modelWithMap, plane);
+        //app.divideModel(modelWithMap, plane);
         app.setComponent(modelWithMap);
         //allParts = app.getListsOfParts(intersectionTriangles, modelWithMap);
         //app.getDividedTriangleFromRing(allParts, modelWithMap, plane);
         renderer = new Renderer(models);
-        
-        /////////////////////////////
-        JFileChooser savingChooser = new JFileChooser(); 
-        FileNameExtensionFilter stl = new FileNameExtensionFilter("STL Files (*.stl;*.STL)", "stl", "STL");
-
-        savingChooser.addChoosableFileFilter(stl);   
-        savingChooser.setFileFilter(stl);
-
-        int saveValue = savingChooser.showSaveDialog(null);
-
-        if(saveValue == JFileChooser.CANCEL_OPTION){
-            return;
-        }
-
-        if(saveValue == JFileChooser.APPROVE_OPTION){
-
-            System.out.println("Cesta " + savingChooser.getSelectedFile().getAbsolutePath());
-            modelManager.exportModel(new File(savingChooser.getSelectedFile().getAbsolutePath() + ".stl"), models.get(0));
-
-        }
-        ////////////////////////////
         
         glCanvas.addGLEventListener(renderer);
         

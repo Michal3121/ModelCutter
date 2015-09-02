@@ -5,8 +5,6 @@
  */
 package modelcutter;
 
-import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.Triangle;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -25,97 +23,46 @@ import javax.vecmath.Vector3d;
  */
 public class Aplication {
     
+    private ModelManagerImpl modelManager;
+    
+    public Aplication(){
+        this.modelManager = new ModelManagerImpl();
+    }
+    
+    /**
+     * This method return a collection of all triangles IDs from a model which 
+     * are intersecting with a plane. Intersecting means, that triangle 
+     * has two intersecting points, one triangle vertex belong to the plane
+     * or two vertices belong to the plane. If the model doesn´t 
+     * intersecting with the plane, methods return empty collection.
+     * 
+     * @param model model which is testing to intersect
+     * @param plane plane which is tested
+     * @return a collection of all triangles IDs from a model which 
+     *         are intersecting with a plane or an empty collection 
+     *         if the model doesn´t intersecting with the plane
+     */
     public Collection<Long> getAllIntersectionTriangles(Model model, Plane plane){
         Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
         Map<Long, MVertex> triangleVertices = model.getVertices(); 
-        Set<Point3f> ring = new HashSet<>(); 
         Set<Long> intersectionTriangles = new HashSet<>();
-        int pocetPretnuti = 0;
-        int pocetPrechodov = 0;
          
         for(long triangleID: triangleMesh.keySet()){
             long[] verticesIDs = triangleMesh.get(triangleID).getTriangleVertices();
-            
             
             for(int k = 0; k < 3; k++){
                 Point3f vertex1 = triangleVertices.get(verticesIDs[k]).getVertex();
                 Point3f vertex2 = triangleVertices.get(verticesIDs[(k+1) % 3]).getVertex();
                 
-                pocetPrechodov++;
                 if(plane.belongToPlane(vertex1) || plane.belongToPlane(vertex2) 
                     || plane.isIntersecting(vertex1, vertex2) ){
                     triangleMesh.get(triangleID).setIntersecting(true);  
                     intersectionTriangles.add(triangleID);
-                    pocetPretnuti++;
                     break;
                 }  
             }
-            /*
-            int aux = 0;
-            for(int k = 0; k < 3; k++)
-            {
-                Point3f vertex = triangleVertices.get(verticesIDs[k]).getVertex();
-                int currentVertex = this.getPointType(vertex, plane);
-                aux += currentVertex;
-                
-                if(currentVertex == 1){ // Pozor ak bod patri rovine
-                    triangleVertices.get(verticesIDs[k]).setObjectID(1);
-                }
-                
-                if(currentVertex == -1){
-                    triangleVertices.get(verticesIDs[k]).setObjectID(2);
-                }     
-            }
-      
-            if(aux == 3){
-                triangleMesh.get(triangleID).setObjectID(1);
-            }
-            else if(aux == -3){
-                triangleMesh.get(triangleID).setObjectID(2);
-            }
-            else{
-                triangleMesh.get(triangleID).setIntersecting(true);  
-                intersectionTriangles.add(triangleID);
-                pocetPretnuti++;
-            }
-            */
         }  
         return Collections.unmodifiableCollection(intersectionTriangles);
-    }
-    /*
-    private int getTriangleType(Point3f[] vertices, Plane plane)
-    {
-        Vector3d normalVec = new Vector3d(plane.getNormal().x, plane.getNormal().y, plane.getNormal().z);
-        Vector3d centerVec = new Vector3d(plane.getCenterPoint().x, plane.getCenterPoint().y, plane.getCenterPoint().z);
-        
-        double distance = normalVec.dot(centerVec); // d
-        
-        
-        for(int k = 0; k < 3; k++){
-            aux += this.getPointType(normalVec, new Vector3d(vertices[k].x, vertices[k].y, vertices[k].z), distance);
-        }
-        
-         
-    }*/
-    
-    private int getPointType(Point3f point, Plane plane)
-    {
-        Vector3d normalVec = new Vector3d(plane.getNormal().x, plane.getNormal().y, plane.getNormal().z);
-        Vector3d centerVec = new Vector3d(plane.getCenterPoint().x, plane.getCenterPoint().y, plane.getCenterPoint().z);
-        double distance = normalVec.dot(centerVec); // d
-        
-        Vector3d vertex = new Vector3d(point.x, point.y, point.z);
-        double dotProduct = normalVec.dot(vertex);
-        double equation = dotProduct - distance;
-        if(equation < 0)
-        {
-            return 1;
-        }
-        else
-        {
-            return -1;
-        }
-        
     }
     
     public List<List<Long>> getListsOfParts(Set<Long> allIntersectingTriangles, Model model){
@@ -238,8 +185,7 @@ public class Aplication {
                 }
                 
                 newTriangleList = this.earClipping(triangleVertWithIntersections, originalTriangle);
-                
-                
+                 
                 for(MTriangle triangle : newTriangleList){
                     long[] triangleVerticesID = triangle.getTriangleVertices();
                     
@@ -256,8 +202,20 @@ public class Aplication {
         
         return model;
     }
-    
-    public Model divideTriangles(Collection<Long> intersectionTriangles, Model model, Plane plane){ // POZOR na nazov intersection
+    /**
+     * This method traverse all intersecting triangles. Every triangle 
+     * which is intersecting with a plane with one or two new point is
+     * divided into smaller triangles and added to model (original triangle
+     * is removed). Model does not update. All new triangles does not have
+     * initialized adjacent vertices.
+     * 
+     * @param intersectionTriangles a collection of triangleIDs which are intersecting
+     * @param model a model 
+     * @param plane a plane which is tested to intersecting
+     * @return a model with new smaller triangles, if some triangle is intersecting 
+     *         with plane or the same model if does not 
+     */
+    public Model divideIntersectingTriangles(Collection<Long> intersectionTriangles, Model model, Plane plane){ // POZOR na nazov intersection
         Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
         Map<Long, MVertex> triangleVertices = model.getVertices();
         long verticesID = triangleVertices.size();
@@ -283,15 +241,6 @@ public class Aplication {
                 {
                     Point3f intersectingPoint = plane.getIntersectionPoint(vertex1.getVertex(), vertex2.getVertex());
                     
-                    int x = (int) intersectingPoint.x;
-                    int y = (int) intersectingPoint.y;
-                    int z = (int) intersectingPoint.z;
-                    
-                    if(x == -3 && y == -3 && z == 38){
-                        System.out.println("hladany trojuholnik");
-                    }
-                    
-                    
                     if(!auxVerticesMap.containsKey(intersectingPoint)){
                         auxVerticesMap.put(intersectingPoint, verticesID);
                         MVertex intersectingVertex = new MVertex(verticesID, (long) -1, intersectingPoint);
@@ -302,44 +251,22 @@ public class Aplication {
                         long auxVerticesID = auxVerticesMap.get(intersectingPoint);
                         verticesToTriangulation.add(triangleVertices.get(auxVerticesID));
                     }
-                }/*
-                else if(plane.belongToPlane(vertex1.getVertex()) && plane.belongToPlane(vertex2.getVertex())){
-                    Set<Long> vertex1aux = new HashSet<>(vertex1.getAdjacentTriangles()); // dame do pomocnej mnoziny
-                    Set<Long> vertex2aux = new HashSet<>(vertex2.getAdjacentTriangles());
-
-                    vertex1aux.retainAll(vertex2aux); // vo vertex1aux zostanu len spolocne prvky s vertex2aux (dva trojuholniky)
-                    vertex1aux.remove(triangleID); // odstranime trojuholnik, ktory prave prehladavame
-                    if(vertex1aux.size() == 1){
-                       //current 
-                    }else{
-                        System.out.println("Vertex1 " + vertex1.toString());
-                        System.out.println("Vertex2 " + vertex2.toString());
-                        System.out.println("Common" + vertex1aux.toString());
-                        System.out.println("");
-                    }
-                    
-                }*/
+                }
             }
             
-            if(verticesToTriangulation.size() > 3){ // > 4
+            if(verticesToTriangulation.size() > 3){
                 newTriangleList = this.earClipping(verticesToTriangulation, originalTriangle);
                 isTrianglesModified = true;
                 
                 for(MTriangle triangle : newTriangleList){
                     long[] triangleVerticesID = triangle.getTriangleVertices();
                                         
-                    //triangleID++;
                     for(long vertexID : triangleVerticesID)
                     {
-                        if(vertexID == 6328)
-                        {
-                            System.out.println("hhh");
-                        }
                         triangleVertices.get(vertexID).addAdjacentTriangles(triangleID); // updatovanie vertexov novych trojuholnikov                     
                     }
                     //triangleMesh.put(triangleID, new MTriangle(triangleID, (long) -1, triangle.getTriangleNormal(), triangle.getTriangleVertices())); 
                     triangleMesh.put(triangleID, new MTriangle(triangleID, 0, triangle.getTriangleNormal(), triangle.getTriangleVertices())); 
-                    
                     triangleID++;
                 }
                 model.deleteTriangleAndUpdateModel(originalTriangle.getTriangleID());
@@ -347,60 +274,83 @@ public class Aplication {
         }
         
         //if(isTrianglesModified){
+            //this.modelManager.updateAdjacentTriangles(model);
             model = this.updateAndDivideModel(model, plane);
+            //model = this.updateAndDivideModel(model, plane);
         //}
         
-        
-        return model;
+        return  model;
     }
     
-    //nastavi adjacent vertices v kazdom trojuholniku 
-    private Model updateAndDivideModel(Model model, Plane plane){
+    /**
+     * This method returns a model which is divided by a plane. All triangles
+     * pair from the model which their common side lies on the plane (two 
+     * triangle vertices belong to the plane) are separated (deleted their
+     * triangle ID in adjacentTriangleList each other). Every triangle which
+     * has set isIntersecting() to true is set to false.
+     * //of triangle lying on the other side of plane//  
+     * 
+     * @param model model which is dividing
+     * @param plane plane which is tested
+     * @return a model which is consist of two or more part 
+     *         which are separated from each other and also has
+     *         no intersection triangles 
+     */
+    public Model updateAndDivideModel(Model model, Plane plane){
         Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
         Map<Long, MVertex> triangleVertices = model.getVertices();
         
         for(long triangleID : triangleMesh.keySet()){
             MTriangle currentTriangle = triangleMesh.get(triangleID);
             
-            //if(currentTriangle.getAdjacentTriangles().size() < 3){
-                long[] verticesIDs = currentTriangle.getTriangleVertices();
-                List<Long> adjacentTrianglesTemp = new ArrayList<>();
+            if(currentTriangle.isIntersecting())
+            {
+                currentTriangle.setIntersecting(false);
+            } 
+            
+            long[] verticesIDs = currentTriangle.getTriangleVertices();
+            List<Long> adjacentTrianglesTemp = new ArrayList<>();
 
-                for(int k = 0; k < 3; k++)
-                {
-                    MVertex vertex1 = triangleVertices.get(verticesIDs[k]);
-                    MVertex vertex2 = triangleVertices.get(verticesIDs[(k+1) % 3]);
-                            
-                    Set<Long> vertex1aux = new HashSet<>(vertex1.getAdjacentTriangles()); // dame do pomocnej mnoziny
-                    Set<Long> vertex2aux = new HashSet<>(vertex2.getAdjacentTriangles());
+            for(int k = 0; k < 3; k++)
+            {
+                MVertex vertex1 = triangleVertices.get(verticesIDs[k]);
+                MVertex vertex2 = triangleVertices.get(verticesIDs[(k+1) % 3]);
 
-                    vertex1aux.retainAll(vertex2aux); // vo vertex1aux zostanu len spolocne prvky s vertex2aux (dva trojuholniky)
-                    vertex1aux.remove(triangleID); // odstranime trojuholnik, ktory prave prehladavame
+                Set<Long> vertex1aux = new HashSet<>(vertex1.getAdjacentTriangles()); // dame do pomocnej mnoziny
+                Set<Long> vertex2aux = new HashSet<>(vertex2.getAdjacentTriangles());
 
-                    if(vertex1aux.size() == 1){
-                        if(!plane.belongToPlane(vertex1.getVertex()) || !plane.belongToPlane(vertex2.getVertex())){
-                            adjacentTrianglesTemp.add(vertex1aux.iterator().next()); //pridame prilahly trojuholnik
-                        }
-                    }else{
-                        System.out.println("Triangle ID " + currentTriangle.getTriangleID());
-                        System.out.println("Vertex1 " + vertex1.toString());
-                        System.out.println("Vertex2 " + vertex2.toString());
-                        System.out.println("Common" + vertex1aux.toString());
-                        System.out.println("");
+                vertex1aux.retainAll(vertex2aux); // vo vertex1aux zostanu len spolocne prvky s vertex2aux (dva trojuholniky)
+                vertex1aux.remove(triangleID); // odstranime trojuholnik, ktory prave prehladavame
+
+                if(vertex1aux.size() == 1){
+                    if(!plane.belongToPlane(vertex1.getVertex()) || !plane.belongToPlane(vertex2.getVertex())){
+                        adjacentTrianglesTemp.add(vertex1aux.iterator().next()); //pridame prilahly trojuholnik
                     }
+                }else{
+                    System.out.println("Chyba //////////////////// ");
                 }
-                currentTriangle.setAdjacentTriangles(adjacentTrianglesTemp);
-            //}
+            }
+            currentTriangle.setAdjacentTriangles(adjacentTrianglesTemp);
         }
         return model;
     }
     
+    /**
+     * This method return a list of new smaller triangles (MTriangle objects), 
+     * which replace an original triangle specified by verticesList. There is 
+     * added -1 as triangleID and objectID, as well as normal from original 
+     * triangle to each new triangle in the list. It uses a slightly modified 
+     * Ear Clipping algorithm.
+     * 
+     * @param verticesList ring of vertices which are triangulated
+     * @param triangle original triangle
+     * @return list of new tringles (MTriangle objects)
+     */
     private List<MTriangle> earClipping(List<MVertex> verticesList, MTriangle triangle)
     {
         double smalestAngle = 181;
         double currentAngle;
         int smalestAngleIndex = 0;
-        int i = 1;
         int listSize;
         long[] triangleVertices = new long[3];
         List<MTriangle> triangleList = new ArrayList<>();
@@ -415,15 +365,20 @@ public class Aplication {
             listSize = verticesList.size();
             
             for(int j = 1; j <= listSize; j++){
-                currentAngle = this.getAngle(verticesList.get(j-1).getVertex() , verticesList.get(j % listSize).getVertex() , verticesList.get((j+1)% listSize).getVertex());
+                currentAngle = this.getAngle(verticesList.get(j-1).getVertex(), 
+                                             verticesList.get(j % listSize).getVertex(), 
+                                             verticesList.get((j+1)% listSize).getVertex());
                 
                 if(oneIntersection && (verticesList.get(j-1).getObjectID() == -1 
-                   || verticesList.get((j+1)% listSize).getObjectID() == -1)){ 
+                   || verticesList.get((j+1)% listSize).getObjectID() == -1))
+                { 
                    smalestAngleIndex = j;
-                    break;
+                   break;
                 }
                 
-                if(verticesList.get(j-1).getObjectID() == -1 && verticesList.get((j+1)% listSize).getObjectID() == -1){ 
+                if(verticesList.get(j-1).getObjectID() == -1 
+                   && verticesList.get((j+1)% listSize).getObjectID() == -1)
+                { 
                     smalestAngleIndex = j;
                     break;
                 }
@@ -441,7 +396,6 @@ public class Aplication {
             triangleVertices[2] = verticesList.get((smalestAngleIndex + 1) % listSize).getVertexID();
             
             triangleList.add(new MTriangle((long)-1, (long) -1, triangle.getTriangleNormal(), triangleVertices));
-            
             verticesList.remove(smalestAngleIndex % listSize);
             smalestAngle = 181;
         }
@@ -449,6 +403,15 @@ public class Aplication {
         return triangleList;
     }
     
+    /**
+     * This method finds and marks by objectID all strongly connected component 
+     * in a model. Strongly connected means, that every triangle is reachable 
+     * from every other triangle. One component is represented by a group 
+     * of triangles with common objectID. 
+     * 
+     * @param model model in which is set strongly connected component
+     * @return number of component
+     */
     public int setComponent(Model model)
     {
         Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
@@ -458,7 +421,6 @@ public class Aplication {
             MTriangle currentTriangle = triangleMesh.get(triangleID);
             if(currentTriangle.getObjectID() == 0){
                 counter++;
-                //this.doDFS(model, currentTriangle, counter);
                 this.doIterativeDFS(model, triangleID, counter);
             }
         }
@@ -468,16 +430,29 @@ public class Aplication {
         
     }
     
+    /**
+     * This method do an Iterative Depth-first search algorithm. It traverse 
+     * all adjacent triangles of triangle specified by triangleID in a model.  
+     * Each of them set objectID specified by counter to find all strongly 
+     * connected componet in the model. 
+     * 
+     * @param model model to traversing
+     * @param triangleID triangleID which specified triangle in which 
+     *                   adjacent triangles are traversing
+     * @param counter it is used to mark objectID in each traversed triangle
+     */
     private void doIterativeDFS(Model model, long triangleID, int counter){
         Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
         List<Long> stack = new ArrayList<>();
         stack.add(triangleID);
         
-        while(!stack.isEmpty()){
-            long currentID = stack.get(0);
-           stack.remove(0);
+        while(!stack.isEmpty())
+        {
+            long currentID = stack.get(0); // take first 
+            stack.remove(0);
             MTriangle currentTriangle = triangleMesh.get(currentID);
-            if(currentTriangle.getObjectID() == 0){
+            if(currentTriangle.getObjectID() == 0)
+            {
                 currentTriangle.setObjectID(counter); // label as discover
                 for(long adjacentID : currentTriangle.getAdjacentTriangles())
                 {
@@ -485,22 +460,17 @@ public class Aplication {
                 }
             }
         }
-        
     }
     
-    private void doDFS(Model model, MTriangle triangle, int counter){
-        
-        Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
-        triangle.setObjectID(-1);
-        
-        for(long triangleID : triangle.getAdjacentTriangles()){
-            if(triangleMesh.get(triangleID).getObjectID() == 0){
-                this.doDFS(model, triangleMesh.get(triangleID), counter);
-            }
-        }
-        triangle.setObjectID(counter);
-    }
-    
+    /**
+     * This method returns size of an angle specified by 3 vertices 
+     * in degrees. It returns smaller angle.
+     * 
+     * @param vertex0 vertex0 is outer vertex
+     * @param vertex1 vertex1 is middle vertex
+     * @param vertex2 vertex2 is outher vertex
+     * @return size of an angle in degrees
+     */
     private double getAngle(Point3f vertex0, Point3f vertex1, Point3f vertex2)
     {
         Vector3d vector1 = new Vector3d(vertex0.x - vertex1.x, vertex0.y - vertex1.y, vertex0.z - vertex1.z);
@@ -510,35 +480,6 @@ public class Aplication {
         vector2.normalize();
         
         return Math.toDegrees(Math.acos(vector1.dot(vector2))) ;
-    }
-    
-    
-    
-    //----//
-    public void getRing(Model model, Plane plane){
-        
-        for(int i = 0; i < model.getNumberOfFacet(); i++)
-        {
-            ModelFacet actualFacet = model.getFacet(i);
-            Point3f[] triangleCoords = new Point3f[3];
-            for(int j = 0; j < 3; j++){
-               double x = actualFacet.getTriangleCoord(j).x;
-               double y = actualFacet.getTriangleCoord(j).y;
-               double z = actualFacet.getTriangleCoord(j).z;
-               
-               triangleCoords[j].x = (float) actualFacet.getTriangleCoord(j).x;
-               triangleCoords[j].y = (float) actualFacet.getTriangleCoord(j).y;
-               triangleCoords[j].z = (float) actualFacet.getTriangleCoord(j).z;      
-            }
-            
-            for(int k = 0; k < 2; k++){
-                if(plane.isIntersecting(triangleCoords[k], triangleCoords[(k+1) % 3])){
-                    System.out.println("pretina sa");
-                }
-            }
-            
-            
-        }
     }
     
     private boolean IsPointInPolygon(Point3f point, List<Long> polygon, Model model)
@@ -554,6 +495,5 @@ public class Aplication {
         
         return false;
     }
-    
-    
+      
 }

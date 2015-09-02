@@ -27,8 +27,8 @@ public class Plane {
 
     public Plane(Point3f centerPoint) {
         this.centerPoint = centerPoint;
-        //this.normal = new Point3f(1.0f, -1.0f, 0.0f);
-        this.normal = new Point3f(0.0f, 1.0f, 0.0f);
+        this.normal = new Point3f(1.0f, -1.0f, 0.0f);
+        //this.normal = new Point3f(0.0f, 1.0f, 0.0f);
     }
 
     public Point3f getCenterPoint() {
@@ -141,6 +141,7 @@ public class Plane {
         double distance = normalVec.dot(centerVec);
         double ret = normalVec.dot(coordVec) - distance; 
         
+        int retAux = (int) ret ;
        //return ((double) Math.round(ret * 10000) / 10000) == 0.0; 
        return ((double) Math.round(ret * 1000) / 1000) == 0.0;
        //return ((double) Math.round(ret * 100) / 100) == 0.0;
