@@ -54,7 +54,7 @@ public class Aplication {
                 Point3f vertex1 = triangleVertices.get(verticesIDs[k]).getVertex();
                 Point3f vertex2 = triangleVertices.get(verticesIDs[(k+1) % 3]).getVertex();
                 
-                if(plane.belongToPlane(vertex1) || plane.belongToPlane(vertex2) 
+                if(plane.isPointBelongToPlane(vertex1) || plane.isPointBelongToPlane(vertex2) 
                     || plane.isIntersecting(vertex1, vertex2) ){
                     triangleMesh.get(triangleID).setIntersecting(true);  
                     intersectionTriangles.add(triangleID);
@@ -150,7 +150,7 @@ public class Aplication {
                     MVertex vertex1 = triangleVertices.get(verticesIDs[k]);
                     MVertex vertex2 = triangleVertices.get(verticesIDs[(k+1) % 3]);
                     
-                    if(plane.isPointLyingOnPlane(vertex1.getVertex()) && plane.isPointLyingOnPlane(vertex2.getVertex()))
+                    if(plane.isPointBelongToPlane(vertex1.getVertex()) && plane.isPointBelongToPlane(vertex2.getVertex()))
                     {
                         Set<Long> vertex1auxSet = new HashSet<>(vertex1.getAdjacentTriangles());
                         Set<Long> vertex2auxSet = new HashSet<>(vertex2.getAdjacentTriangles());
@@ -236,7 +236,7 @@ public class Aplication {
                 MVertex vertex2 = triangleVertices.get(verticesIDs[(k+1) % 3]);
                 
                 verticesToTriangulation.add(vertex1);
-                if(!plane.belongToPlane(vertex1.getVertex()) && !plane.belongToPlane(vertex2.getVertex()) 
+                if(!plane.isPointBelongToPlane(vertex1.getVertex()) && !plane.isPointBelongToPlane(vertex2.getVertex()) 
                    && plane.isIntersecting(vertex1.getVertex(), vertex2.getVertex()))
                 {
                     Point3f intersectingPoint = plane.getIntersectionPoint(vertex1.getVertex(), vertex2.getVertex());
@@ -323,7 +323,7 @@ public class Aplication {
                 vertex1aux.remove(triangleID); // odstranime trojuholnik, ktory prave prehladavame
 
                 if(vertex1aux.size() == 1){
-                    if(!plane.belongToPlane(vertex1.getVertex()) || !plane.belongToPlane(vertex2.getVertex())){
+                    if(!plane.isPointBelongToPlane(vertex1.getVertex()) || !plane.isPointBelongToPlane(vertex2.getVertex())){
                         adjacentTrianglesTemp.add(vertex1aux.iterator().next()); //pridame prilahly trojuholnik
                     }
                 }else{
