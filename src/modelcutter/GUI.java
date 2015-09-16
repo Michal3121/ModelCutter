@@ -52,13 +52,13 @@ public class GUI extends javax.swing.JFrame {
     private Renderer renderer; 
     private final FPSAnimator animator; // urcuje kolkokrat za sekundu sa vykresli obraz
     private static final int FPS = 60; //60
-    private Aplication app;
+    private final Aplication app;
     
-    private ModelManagerImpl modelManager;
+    private final ModelManagerImpl modelManager;
     private List<Model> models;
-    private Model modelWithMap;
+    private Model newModel;
+    private Point3f planeCenter;
    
-    
     /**
      * Creates new form MainGUI
      */ 
@@ -230,30 +230,17 @@ public class GUI extends javax.swing.JFrame {
                 }
                
                 if(openValue == JFileChooser.APPROVE_OPTION){
-                    //Model model = new Model(new File(openingChooser.getSelectedFile().getAbsolutePath()));
-                    //renderer.drawModel(openingChooser.getSelectedFile().getAbsolutePath(), null);
-                    //System.out.println(openingChooser.getSelectedFile().getAbsolutePath()); 
-                    //model.loadModel();
-                    //File vypis = new File(openingChooser.getSelectedFile().getAbsolutePath() + ".STL"));
-                    //models.add(modelManager.loadModel2(new File(openingChooser.getSelectedFile().getAbsolutePath())));
-                    //models.add(modelManager.loadModel2(new File(openingChooser.getSelectedFile().getAbsolutePath())));
-                    modelWithMap = modelManager.loadModel(new File(openingChooser.getSelectedFile().getAbsolutePath()));
-                    models.add(modelWithMap);
-                    renderer = new Renderer(models);
-                    
+                    models.clear();
+                    newModel = modelManager.loadModel(new File(openingChooser.getSelectedFile().getAbsolutePath()));
+                    renderer = new Renderer(newModel);
                     glCanvas.addGLEventListener(renderer);
                     
-                    float planeX = modelWithMap.getModelCenter().x / 2;
-                    float planeY = modelWithMap.getModelCenter().y / 2;
-                    float planeZ = modelWithMap.getModelCenter().z / 2;
-
-                    Point3f planeCenter = new Point3f(planeX, planeZ, planeY);
-        
-                    Plane plane = new Plane(planeCenter);
+                    float planeX = newModel.getModelCenter().x;
+                    float planeY = newModel.getModelCenter().y;
+                    float planeZ = newModel.getModelCenter().z;
                     
-                    //app.setComponent(modelWithMap);
-                    
-                    renderer.setPlane(plane);
+                    planeCenter = new Point3f(planeX, planeY, planeZ);  
+                    renderer.setPlane(new Plane(planeCenter));
                 }     
             }  
         });
@@ -383,26 +370,21 @@ public class GUI extends javax.swing.JFrame {
         Set<Long> intersectionTriangles = new HashSet<>();
         List<List<Long>> allParts;
         
-        float planeX = this.modelWithMap.getModelCenter().x;
-        float planeY = this.modelWithMap.getModelCenter().y;
-        float planeZ = this.modelWithMap.getModelCenter().z;
-        
-        Point3f planeCenter = new Point3f(planeX, planeY, planeZ);
-        
         Plane plane = new Plane(planeCenter);
         //app.setComponent(modelWithMap);
-        intersectionTriangles.addAll(app.getAllIntersectionTriangles(modelWithMap, plane));
-        app.divideIntersectingTriangles(intersectionTriangles, modelWithMap, plane);
+        intersectionTriangles.addAll(app.getAllIntersectionTriangles(newModel, plane));
+        app.divideIntersectingTriangles(intersectionTriangles, newModel, plane);
         //app.divideModel(modelWithMap, plane);
-        app.setComponent(modelWithMap);
+        app.setComponent(newModel);
         //allParts = app.getListsOfParts(intersectionTriangles, modelWithMap);
         //app.getDividedTriangleFromRing(allParts, modelWithMap, plane);
+        models.add(newModel); // docasne riesenie, kym nemame rozne modely
         renderer = new Renderer(models);
         
         glCanvas.addGLEventListener(renderer);
         
-        System.out.println("Center 2 Cube" + this.modelWithMap.getModelCenter());
-        System.out.println("Center Cube" + this.modelWithMap.getModelCenter());
+        System.out.println("Center 2 Cube" + this.newModel.getModelCenter());
+        System.out.println("Center Cube" + this.newModel.getModelCenter());
         
         //ringList.addAll(app.getTriangleRing(this.modelWithMap, plane));
         System.out.println("kliknutie" + ringList.toString() + "velkost kolekcie" + ringList.size());

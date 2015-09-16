@@ -83,6 +83,7 @@ public class Renderer  implements GLEventListener {
     private Vector3d vector1;
     private Vector3d vector2;
     private List<Model> listOfModels;
+    private Model model;
     private List<Point3f> ringList = new ArrayList<>();
     private Plane plane;
     
@@ -108,10 +109,7 @@ public class Renderer  implements GLEventListener {
 
     public void setVector2(double x, double y, double z) {
         this.vector2 = new Vector3d(x,y,z);
-    }
-    
-    
-    //private Model liver; 
+    } 
     
     public boolean isLeftMouseButtonPressed() {
         return leftMouseButtonPressed;
@@ -189,15 +187,15 @@ public class Renderer  implements GLEventListener {
         this.plane = plane;
     }
     
-    public Renderer(){
-        listOfModels = new ArrayList<>();
+    public Renderer(){ //Musi byt bezparametricky kostruktor, inak sa nic nevykresli po zapnuti
+    }
+    
+    public Renderer(Model model){
+        this.model = model;
     }
     
     public Renderer(Collection<Model> models){
-        listOfModels = new ArrayList<>();
-        System.out.println("Pred pridanim");
-        this.listOfModels.addAll(models);
-        System.out.println("Po pridani");
+       this.listOfModels = new ArrayList<>(models);
     }
     
     
@@ -259,47 +257,43 @@ public class Renderer  implements GLEventListener {
         gl.glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
         gl.glShadeModel(GL_SMOOTH);
         
-        
-        
         gl.glNewList(1,GL_COMPILE);
-        //gl.glTranslatef(-1.0f, -1.0f, 0.0f);
-        //gl.glScalef(0.04f,0.04f,0.04f);
         
-        //liver.loadModel();
+        if(this.model != null)
+        {
+            double translatedX = model.getModelCenter().x;
+            double translatedY = model.getModelCenter().y;
+            double translatedZ = model.getModelCenter().z;
+                
+            gl.glTranslated(- translatedX, - translatedY,  - translatedZ);
+            this.drawModel(model, gl);
+            this.drawSquarePlane(this.getPlane(), 100, gl);
+        }
         
-        if(!listOfModels.isEmpty()){
-            
+        if(this.listOfModels != null && !listOfModels.isEmpty()) // POZOR vyhodnocovanie zlava
+        {
             for(int i=0; i< listOfModels.size(); i++){
                 double translatedX = listOfModels.get(i).getModelCenter().x;
                 double translatedY = listOfModels.get(i).getModelCenter().y;
                 double translatedZ = listOfModels.get(i).getModelCenter().z;
                 
                 gl.glBegin(GL.GL_POINTS);
-                gl.glPointSize( 6.0f );
-                gl.glColor3f(0,1,0);
-                gl.glVertex3f((float) translatedX/2, (float) translatedY/2, (float) translatedZ/2);
-                gl.glPointSize( 6.0f );
-                //gl.glColor3f(1.0f, 1.0f, 1.0f);
+                gl.glPointSize( 2.0f );
+                gl.glColor3f(0,0,1);
+                gl.glVertex3d(2, 2, 1);
                 gl.glEnd();
-
-                
-                System.out.println("x = " + translatedX);
-                System.out.println("y = " + translatedY);
-                System.out.println("z = " + translatedZ);
-                
-                System.out.println("Velkost ----------");
-                System.out.println("x:" + listOfModels.get(i).getSizeX());
-                System.out.println("y:" + listOfModels.get(i).getSizeY());
-                System.out.println("z:" + listOfModels.get(i).getSizeZ());
                 
                 gl.glTranslated(- translatedX, - translatedY,  - translatedZ);
                 
+                gl.glBegin(GL.GL_POINTS);
+                gl.glPointSize( 2.0f );
+                gl.glColor3f(0,0,1);
+                gl.glVertex3d(translatedX+2, translatedY+2, translatedZ + 1);
+                gl.glEnd();
+                
                 drawModel(listOfModels.get(i), gl);
-                //gl.glTranslated(- translatedX, 0,  0);
-                System.out.println("kreslime!");
             }
-            this.drawSquarePlane(this.getPlane(), 100, gl);
-            
+            this.drawSquarePlane(this.getPlane(), 100, gl);      
         }
         gl.glEndList();
         

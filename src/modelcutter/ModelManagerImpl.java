@@ -31,33 +31,20 @@ import org.j3d.loaders.stl.STLFileReader;
  * @author MICHAL
  */
 public class ModelManagerImpl implements ModelManager {
-
-    private STLFileReader reader;
-    private final double[] normal; // kvoli vynimkam atribut
-    private final double[][] vertex; // kvoli vynimkam atribut
-    private final Map<Long, MTriangle> triangleMap; 
-    private final Map<Long, MVertex> verticesMap; 
-    
-    public ModelManagerImpl(){
-        normal = new double[3];
-        vertex = new double[3][3];
-        triangleMap = new HashMap<>();
-        verticesMap = new HashMap<>();
-    }
-      
+  
     @Override
     public Model loadModel(File path){
-        try {
-            reader = new STLFileReader(path);
-        } catch (InvalidFormatException | IOException ex) {
-            Logger.getLogger(Model.class.getName()).log(Level.SEVERE, null, ex);
-        }
         
+        Map<Long, MTriangle> triangleMap = new HashMap<>();
+        Map<Long, MVertex> verticesMap = new HashMap<>();
         try {
+            STLFileReader reader = new STLFileReader(path);
             long vertexID = 0;
             long triangleID = 0;
             Map<Point3f, Long> auxVerticesMap = new HashMap<>();
-            
+            double[] normal = new double[3];
+            double[][] vertex = new double[3][3];
+        
             while(reader.getNextFacet(normal, vertex)){
                 
                 Point3f triangleNorm = new Point3f((float) normal[0], (float) normal[1], (float) normal[2]);
@@ -67,7 +54,7 @@ public class ModelManagerImpl implements ModelManager {
                 for(int i = 0; i < 3; i++){
                     
                     if(!auxVerticesMap.containsKey(triangleVertices[i])){
-                        this.verticesMap.put(vertexID, new MVertex(vertexID, 0, triangleVertices[i], triangleID));
+                        verticesMap.put(vertexID, new MVertex(vertexID, 0, triangleVertices[i], triangleID));
                         //this.verticesMap.get(vertexID).addAdjacentTriangles(triangleID); // !! spoliehame sa na to, ze ziadny vrchol nie je sam
                         auxVerticesMap.put(triangleVertices[i], vertexID);
                         triangleVerticesID[i] = vertexID;
@@ -75,20 +62,19 @@ public class ModelManagerImpl implements ModelManager {
                     }else{
                         long auxIndex = auxVerticesMap.get(triangleVertices[i]);
                         triangleVerticesID[i] = auxIndex; // index trojuholnikov 
-                        this.verticesMap.get(auxIndex).addAdjacentTriangles(triangleID);
+                        verticesMap.get(auxIndex).addAdjacentTriangles(triangleID);
                     }
                 }
                 
                 triangleMap.put(triangleID, new MTriangle(triangleID, 0, triangleNorm, triangleVerticesID));
                 triangleID++;
             }
-            
         } catch (InvalidFormatException | IOException ex) {
-            Logger.getLogger(ModelManagerImpl.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Model.class.getName()).log(Level.SEVERE, null, ex);
         }
            
-        System.out.println("Trojuholniky = " + this.triangleMap.keySet().size());
-        System.out.println("Vrcholy = " + this.verticesMap.keySet().size());
+        System.out.println("Trojuholniky = " + triangleMap.keySet().size());
+        System.out.println("Vrcholy = " + verticesMap.keySet().size());
         return this.updateAdjacentTriangles(new Model(verticesMap, triangleMap));
     }
     
@@ -140,7 +126,7 @@ public class ModelManagerImpl implements ModelManager {
         StlTextFile writer = new StlTextFile(path);
         
         try {
-            writer.writeToFile(this.facetTransformerToSCAD());
+            writer.writeToFile(this.facetTransformerToSCAD(model));
         } catch (IOException ex) {
             Logger.getLogger(ModelManagerImpl.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -152,18 +138,20 @@ public class ModelManagerImpl implements ModelManager {
         StlBinaryFile writer = new StlBinaryFile(path);
         
         try {
-            writer.writeToFile(this.facetTransformerToSCAD());
+            writer.writeToFile(this.facetTransformerToSCAD(model));
         } catch (IOException ex) {
             Logger.getLogger(ModelManagerImpl.class.getName()).log(Level.SEVERE, null, ex);
         }
         
     }
     
-    private List<Facet> facetTransformerToSCAD(){
+    private List<Facet> facetTransformerToSCAD(Model model){
+        Map<Long, MTriangle> triangleMap = model.getTriangleMesh();
+        Map<Long, MVertex> verticesMap = model.getVertices(); 
         List<Facet> listOfFacetsSCAD = new ArrayList<>();  
         
-        for(long key : this.triangleMap.keySet()){
-            MTriangle currentTriangle = this.triangleMap.get(key);
+        for(long key : triangleMap.keySet()){
+            MTriangle currentTriangle = triangleMap.get(key);
             long[] verticesKeys = currentTriangle.getTriangleVertices();
             Point3f triangleNormal = currentTriangle.getTriangleNormal();
             
@@ -171,7 +159,7 @@ public class ModelManagerImpl implements ModelManager {
             Coords3d[] coordsSCAD = new Coords3d[3];
             
             for(int i = 0; i < 3; i++){
-                triangleVertices[i] = this.verticesMap.get(verticesKeys[i]).getVertex();
+                triangleVertices[i] = verticesMap.get(verticesKeys[i]).getVertex();
                 coordsSCAD[i] = new Coords3d((double)triangleVertices[i].x, (double) triangleVertices[i].y, (double) triangleVertices[i].z);
             }
             
@@ -179,8 +167,8 @@ public class ModelManagerImpl implements ModelManager {
             Triangle3d triangleSCAD = new Triangle3d(coordsSCAD[0], coordsSCAD[1], coordsSCAD[2]); 
             listOfFacetsSCAD.add(new Facet(triangleSCAD, normalSCAD, Color.lightGray));   
         }
-        System.out.println("Ukladanie Trojuholniky = " + this.triangleMap.keySet().size());
-        System.out.println("Ukladanie Vrcholy = " + this.verticesMap.keySet().size());
+        System.out.println("Ukladanie Trojuholniky = " + triangleMap.keySet().size());
+        System.out.println("Ukladanie Vrcholy = " + verticesMap.keySet().size());
         System.out.println("Ukladanie SCAD List : " + listOfFacetsSCAD.size());
         return listOfFacetsSCAD;
     }
