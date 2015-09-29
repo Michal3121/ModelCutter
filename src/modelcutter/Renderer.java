@@ -47,8 +47,11 @@ import static javax.media.opengl.fixedfunc.GLLightingFunc.GL_SMOOTH;
 import static javax.media.opengl.fixedfunc.GLMatrixFunc.GL_MODELVIEW;
 import static javax.media.opengl.fixedfunc.GLMatrixFunc.GL_PROJECTION;
 import javax.media.opengl.glu.GLU;
+import javax.vecmath.Matrix3f;
+import javax.vecmath.Matrix4f;
 import javax.vecmath.Point3f;
 import javax.vecmath.Quat4f;
+import javax.vecmath.Vector2d;
 import javax.vecmath.Vector3d;
 import javax.vecmath.Vector3f;
 
@@ -82,10 +85,22 @@ public class Renderer  implements GLEventListener {
     private float[] matrix = new float [16];
     private Vector3d vector1;
     private Vector3d vector2;
+    private Vector2d lastVector;
     private List<Model> listOfModels;
     private Model model;
     private List<Point3f> ringList = new ArrayList<>();
     private Plane plane;
+    private double lastXMouse = 0;
+    private double lastYMouse = 0;
+    private boolean isMouseFirstPressed = true;
+    private Matrix4f rotationMatrix = new Matrix4f(new float[] {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1});
+    private Matrix4f rotationMatrixPrev = new Matrix4f(new float[] {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1});
+    private double trueMouseX = 0.1;
+    private double prevTrueMouseX = 0;
+    private double trueMouseY = 0.1;
+    private double prevTrueMouseY = 0;
+    private Quaternion quatAllRot = new Quaternion(0.0f,0.0f,0.0f,1.0f);
+    private Quaternion quatFinal = new Quaternion(0.0f,0.0f,0.0f,1.0f);
     
     
     private float[] vectorA = {2,2,0};
@@ -94,7 +109,15 @@ public class Renderer  implements GLEventListener {
     private VectorUtil vectorUtil = new VectorUtil();
             
     private Vector3f vec;
-     
+    
+    public Vector2d getLastVector() {
+        return lastVector;
+    }
+
+    public void setLastVector(Vector2d lastVector) {
+        this.lastVector = lastVector;
+    }
+    
     public Vector3d getVector1() {
         return vector1;
     }
@@ -128,33 +151,42 @@ public class Renderer  implements GLEventListener {
     }
     
     public double getMouseX() {
+        //System.out.println("Return MoseX " + this.mouseX);
         return mouseX;
     }
 
-    public void setMouseX(double mouseX) { 
+    public void setMouseX(double mouseX) {
+        this.trueMouseX = (mouseX - (586/2.0))/(586/2.0);
+        System.out.println("TrueXMouse" + this.trueMouseX);
+        System.out.println("Set MoseX " + mouseX);
         if(isMiddleMouseButtonPressed() || isLeftMouseButtonPressed()){
             
             double deltaX = mouseX - this.lastX;
-                      
-            if(abs(deltaX) > 40.0f){ //50
+            
+            if(abs(deltaX) > 40.0f){ //50//40//20 netrha pri malych posunoch
                 this.lastX = mouseX;
+                System.out.println("Delta X= " + deltaX);
                 return;
             }
             this.mouseX += deltaX;
             this.lastX = mouseX;
+            //System.out.println("MoseX " + this.mouseX);
+            //System.out.println("LastX" + this.lastX);
         }
         
     }
 
     public double getMouseY() {
-        return mouseY;
+        return  mouseY;
     }
 
     public void setMouseY(double mouseY) {
+        this.trueMouseY = (mouseY - (311/2.0))/(311/2.0);
+        System.out.println("TrueYMouse " + this.trueMouseY);
         if(isMiddleMouseButtonPressed() || isLeftMouseButtonPressed()){
             double deltaY = mouseY - this.lastY;
             
-            if(abs(deltaY) > 40.0f){ //50
+            if(abs(deltaY) > 40.0f /*40.0f*/){ //50
                 this.lastY = mouseY;
                 return;
             }
@@ -215,10 +247,11 @@ public class Renderer  implements GLEventListener {
         
         System.out.println("Kvaternion C " + quadC.normalize().toString());
         */
-        
+        System.out.println("Math.sqrt(2)" + Math.sqrt(2));
         System.out.println("Kvaternion X " + quadX.toString());
         System.out.println("Kvaternion X norm " + quadX.normalize().toString());
-        euler2 = quadX.toEuler(euler);
+        //euler2 = quadX.toEuler(euler);
+        euler2 = new float[4];
         System.out.println("Euler X " + euler2[0] + " Y =" + euler2[1] + " z=" + 90* Math.atan(euler2[2]));
         
         System.out.println("Euler X " + euler2[0] + " Y =" + euler2[1] + " z2=" + Math.toDegrees(euler2[2]));
@@ -232,7 +265,7 @@ public class Renderer  implements GLEventListener {
         
         //rotate(1,2,3);
         //rotate();
-         
+        this.setLastVector(new Vector2d(0,0));
         
         GL2 gl = drawable.getGL().getGL2();    
         
@@ -315,30 +348,72 @@ public class Renderer  implements GLEventListener {
         gl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear color and depth buffers
         
         gl.glLoadIdentity();
+        float[] rotationMatrix = new float[] {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
+        Quaternion quatCurrent = new Quaternion(0.0f,0.0f,0.0f,1.0f);
+        Quaternion quaternionTest = new Quaternion(0.0f,0.0f,0.0f,1.0f); 
         
         //glu.gluLookAt(0.0, 0.0, 1.5, 0.0, 0.0, 0.0, 0.0, 7.0, 0.0); //povodna gluLookAt
         //glu.gluLookAt(0.0, 0.0, mouseZoom, 0.0, 0.0, mouseZoom - 1, 0.0, 1.0, 0.0);
        
         glu.gluLookAt(0.0, 0.0, getMouseZoom() /*0.0*/, 0.0, 0.0, /*getMouseZoom() - 1*/ 0.0, 0.0, 1.0, 0.0);
         
+        if(this.middleMouseButtonPressed && 
+          (this.prevTrueMouseX != this.trueMouseX || 
+           this.prevTrueMouseY != this.trueMouseY)) //stlacili sme stredne koliesko + zmenila sa aspon jedna suradnica
+        {
+            if(isMouseFirstPressed){
+                this.prevTrueMouseX = this.trueMouseX;
+                this.prevTrueMouseY = this.trueMouseY;
+                this.isMouseFirstPressed = false;
+            }else if(Math.abs(this.prevTrueMouseX - this.trueMouseX) > 0.1){
+                this.prevTrueMouseX = this.trueMouseX;
+                //this.prevTrueMouseY = this.trueMouseY;
+            }
+            else if(Math.abs(this.prevTrueMouseY - this.trueMouseY) > 0.1){
+                
+                //this.prevTrueMouseX = this.trueMouseX;
+                this.prevTrueMouseY = this.trueMouseY;
+            }else{
+            
+            Vector2d newVector = new Vector2d(this.trueMouseX/1, -this.trueMouseY/1);
+            quatCurrent = this.rotate2(new Vector2d(this.prevTrueMouseX/1, -this.prevTrueMouseY/1), newVector, /*this.getMouseZoom()*/1);
+            
+            //quatFinal = quatAllRot.mult(quatCurrent);
+            //gl.glMultMatrixf(quatFinal.toMatrix(new float[16], 0), 0);
+            quatFinal = quatCurrent.mult(quatAllRot);
+            //quatFinal = quatAllRot.mult(quatCurrent); // zla rotacia ako predtym
+            quatAllRot = quatFinal;
+            this.prevTrueMouseX = this.trueMouseX;
+            this.prevTrueMouseY = this.trueMouseY;
+            }
+        }else
+        {
+            this.isMouseFirstPressed = true;
+            //quatAllRot = new Quaternion(quatFinal);
+        }
+        //gl.glRotatef((float) Math.toDegrees(euler2[0]), 1, 0, 0);
+        //gl.glRotatef((float) Math.toDegrees(euler2[1]), 0, 1, 0);
+        //gl.glRotatef((float) Math.toDegrees(euler2[2]), 0, 0, 1);
+        //quatFinal.invert();
+        //quatFinal = quatAllRot.mult(quatCurrent);
+         
+        //gl.glLoadMatrixf(quatFinal.toMatrix(new float[16], 0), 0);
+        gl.glMultMatrixf(quatFinal.toMatrix(new float[16], 0), 0); // umiestnene tu, otaca sa cela scena
         
-        
-        /*
-        rotate(getMouseX()/2, getMouseY()/2, getMouseZoom());
-        gl.glRotatef((float) Math.toDegrees(euler2[0]), 1, 0, 0);
-        gl.glRotatef((float) Math.toDegrees(euler2[1]), 0, 1, 0);
-        gl.glRotatef((float) Math.toDegrees(euler2[2]), 0, 0, 1);
-        */
         //System.out.println("Mouse X " + getMouseX());
+        //glu.gluLookAt(0.0, 0.0, getMouseZoom() /*0.0*/, 0.0, 0.0, /*getMouseZoom() - 1*/ 0.0, 0.0, 1.0, 0.0);
         
-        gl.glTranslatef((float) getMouseX()/15, 0.0f, 0.0f); // translacia mysou 
-        gl.glTranslatef(0.0f, (float) -getMouseY()/15, 0.0f);
+        //gl.glTranslatef((float) getMouseX()/15, 0.0f, 0.0f); // translacia mysou 
+        //gl.glTranslatef(0.0f, (float) -getMouseY()/15, 0.0f);
         
         
-        this.drawAxes(gl);
+        this.drawAxes(gl); // otacanie spolu s objektom
         
         // vykreslenie aktualneho modelu
         gl.glPushMatrix();
+        //gl.glMultMatrixf(rotationMatrix, 0);
+        //gl.glLoadMatrixf(quatAllRot.toMatrix(new float[16], 0), 0);
+        //gl.glMultMatrixf(quatAllRot.toMatrix(new float[16], 0), 0);
         gl.glCallList(1); 
         gl.glPopMatrix();
         
@@ -370,7 +445,9 @@ public class Renderer  implements GLEventListener {
         
         // vykreslenie cajnika
         gl.glPushMatrix();
+        //gl.glLoadIdentity();
         gl.glTranslatef(0.0f, 0.0f, 10.0f);
+        //gl.glMultMatrixf(rotationMatrix, 0);
         glut.glutSolidTeapot(1);
         gl.glPopMatrix();
         
@@ -445,7 +522,8 @@ public class Renderer  implements GLEventListener {
         gl.glMatrixMode(GL_PROJECTION); // nastavi sa typ projekcie 
         gl.glLoadIdentity();
         //glu.gluPerspective(45, width/(float)height, 1, 50); 
-        glu.gluPerspective(45, width/(float)height, 0.1, 50);
+        //glu.gluPerspective(45, width/(float)height, 0.1, 50);
+        glu.gluPerspective(45, width/(float)height, 0.1, 500);
         gl.glMatrixMode(GL_MODELVIEW); 
             
     }
@@ -536,8 +614,8 @@ public class Renderer  implements GLEventListener {
         
         first = new Vector3d(0,0,z);
         last = new Vector3d(x,y,z);
-        System.out.println("first" + first.toString());
-        System.out.println("last" + last.toString());
+        //System.out.println("first" + first.toString());
+        //System.out.println("last" + last.toString());
         
         //System.out.println("Dlzka pred normalizaciou " + last.length());
         //System.out.println("Dlzka pred normalizaciou " + last.length());
@@ -553,11 +631,124 @@ public class Renderer  implements GLEventListener {
         angle = Math.acos(dotProduct);
         
         Quaternion quad = new Quaternion((float) (crossVec.x * Math.sin(angle/2)), (float) (crossVec.y * Math.sin(angle/2)), (float) (crossVec.z * Math.sin(angle/2)), (float) Math.cos(angle/2));
-        
+        System.out.println("Quad " + quad.toString());
+        System.out.println("Qad length " + quad.magnitude());
+        quad.normalize();
+        System.out.println("Quad length norm " + quad.magnitude());
         //System.out.println("Kvaternion " + quad.toString());
         
         euler2 = quad.toEuler(euler);
         return quad.toMatrix(rotMatrix, 0);
+    }
+    
+    private /*float[]*/ Quaternion rotate2(Vector2d lastVector2d, Vector2d nextVector2d, double radius)
+    {
+        double lastZ;
+        double nextZ;
+        
+        double rPow2 = Math.pow(radius,2);
+        float xLastPow2 = (float) Math.pow(lastVector2d.x,2);
+        float yLastPow2 = (float) Math.pow(lastVector2d.y,2);
+       
+        //if(xLastPow2 + yLastPow2 <= (radius/Math.sqrt(2))){
+        if(xLastPow2 + yLastPow2 <= ((radius*radius)/2.0f)){
+            lastZ = Math.sqrt(rPow2 - (xLastPow2 + yLastPow2));
+        }else{
+            lastZ = (/*radius/2*/rPow2)/(2*Math.sqrt(xLastPow2 + yLastPow2));
+        }
+        
+        Vector3d lastVector3d = new Vector3d(lastVector2d.x, lastVector2d.y, lastZ);
+        //lastVector3d.normalize();
+        
+        float xNextPow2 = (float) Math.pow(nextVector2d.x,2);
+        float yNextPow2 = (float) Math.pow(nextVector2d.y,2);
+        
+        //if(xNextPow2 + yNextPow2 <= (radius/Math.sqrt(2))){
+        if(xNextPow2 + yNextPow2 <= ((radius*radius)/2.0f)){
+            nextZ = Math.sqrt(rPow2 - (xNextPow2 + yNextPow2));
+        }else{
+            nextZ = (/*radius/2*/ rPow2)/(2*Math.sqrt(xNextPow2 + yNextPow2));
+        }
+        
+        Vector3d nextVector3d = new Vector3d(nextVector2d.x, nextVector2d.y, nextZ);
+        //nextVector3d.normalize();
+        
+        Vector3d normalVec = new Vector3d(0,0,0);
+        normalVec.cross(lastVector3d, nextVector3d);
+        //normalVec.normalize();
+        
+        double angle = Math.atan(normalVec.length()/(lastVector3d.dot(nextVector3d)));
+        //double angle = Math.atan((lastVector3d.dot(nextVector3d)));
+        double angleASin = Math.acos(normalVec.length()/(lastVector3d.dot(nextVector3d)));
+        double sin = Math.sin(normalVec.length()/(lastVector3d.dot(nextVector3d)));
+        double cos = Math.cos(normalVec.length()/(lastVector3d.dot(nextVector3d)));
+        
+        //double angle2 = Math.sin(normalVec.length()/(lastVector3d.dot(nextVector3d)));
+        if(Math.toDegrees(angle) != 0){
+        System.out.println("//////////////////////////");
+        System.out.println("Angle=" + Math.toDegrees(angle));
+        //System.out.println("Angle sin = " + Math.toDegrees(sin/2));
+        /*System.out.println("last 2D" + lastVector2d.toString());
+        System.out.println("next 2D" + nextVector2d.toString());
+        System.out.println("R = " + radius);
+        System.out.println("last 3D" + lastVector3d.toString());
+        System.out.println("next 3D" + nextVector3d.toString());*/
+        System.out.println("normal 3D" + normalVec.toString());
+        }
+        if(Math.toDegrees(angle) > 10){
+            System.out.println("Velky uhol");
+        }
+        
+        lastVector3d.normalize();
+        nextVector3d.normalize();
+        normalVec.normalize();
+        
+        Quaternion quatRot = new Quaternion((float) (normalVec.x * Math.sin(angle)), (float) (normalVec.y * Math.sin(angle)), (float) (normalVec.z * Math.sin(angle)), (float) Math.cos(angle));
+        Quaternion quatLast = new Quaternion((float) lastVector3d.x, (float) lastVector3d.y, (float) lastVector3d.z, 0);
+        Quaternion quatNext = new Quaternion((float) nextVector3d.x, (float) nextVector3d.y, (float) nextVector3d.z, 0);
+        Quaternion quatNext2 = new Quaternion((float) nextVector3d.x, (float) nextVector3d.y, (float) nextVector3d.z, 0);
+        //Quaternion quatLast = new Quaternion((float) -(Math.sqrt(2.0d)/2.0d), 0, 0, (float) (Math.sqrt(2.0d)/2.0d));
+        //Quaternion quatNext = new Quaternion((float) (Math.sqrt(2.0d)/2.0d), 0, 0, (float) (Math.sqrt(2.0d)/2.0d));
+        /*if(Math.toDegrees(angle) != 0){
+        System.out.println("Quat Last" + quatLast.toString());
+        System.out.println("Quat Next" + quatNext.toString());
+        }*/
+        quatRot.normalize();
+        //quatLast.invert();
+        quatNext.invert();
+        //quatNext.add(quatLast);
+        quatNext.mult(quatLast);
+        //quatLast.mult(quatNext);
+        //quatNext.mult(quatNext2);
+        if(angle != 0){
+        euler2 = quatNext.toEuler(euler);
+        //euler2 = quatRot.toEuler(euler);
+        }
+        else
+        {
+            //System.out.println("Seka");
+        }
+        //euler2 = quatRot.toEuler(euler);
+        
+        /*if(!quatNext.equals(quatRot))
+        {
+            System.out.println("Errotr");
+            System.out.println("Quat Rot = " + quatRot.toString());
+            System.out.println("Quat Next = " + quatNext.toString());
+        }*/
+        
+        //quatRot.normalize();
+        float [] eulerAngleInRad = new float[3];
+        quatNext.toEuler(eulerAngleInRad);
+        //quatRot.toEuler(eulerAngleInRad);
+        
+        double pitchX = Math.toDegrees(eulerAngleInRad[0]); 
+        double yawY = Math.toDegrees(eulerAngleInRad[1]); 
+        double rollZ = Math.toDegrees(eulerAngleInRad[2]); 
+        
+        //return quatNext.toMatrix(new float [16], 0);
+        System.out.println("Quat Next" + quatNext.toString());
+        return quatNext;
     }
     
     public void drawFloor(int size, GL2 gl){

@@ -79,7 +79,7 @@ public class GUI extends javax.swing.JFrame {
         //-------------------------------------
         models = new ArrayList<>();
         modelManager = new ModelManagerImpl();
-        
+      
         
         glprofile = GLProfile.get(GLProfile.GL2); // urcenie verziu OpenGL 2.0
         glCanvas = new GLCanvas(new GLCapabilities(glprofile)); // objekt verzie OpenGL
@@ -120,7 +120,7 @@ public class GUI extends javax.swing.JFrame {
             @Override
             public void mousePressed(MouseEvent e) {
                 if(e.getButton() == MouseEvent.BUTTON2){
-                    renderer.setMiddleMouseButtonPressed(true);
+                    renderer.setMiddleMouseButtonPressed(true); 
                 }
                 
                 if(e.getButton() == MouseEvent.BUTTON1){
