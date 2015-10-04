@@ -28,6 +28,7 @@ public class Plane {
         this.centerPoint = centerPoint;
         //this.normal = new Point3f(1.0f, -1.0f, 0.0f);
         this.normal = new Point3f(0.0f, 1.0f, 0.0f);
+        //this.normal = new Point3f(0.0f, 0.0f, 1.0f);
     }
 
     public Point3f getCenterPoint() {

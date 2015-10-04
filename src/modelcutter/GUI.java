@@ -89,10 +89,10 @@ public class GUI extends javax.swing.JFrame {
 
             @Override
             public void mouseDragged(MouseEvent e) {
-                if(e.isAltDown()){
+                //if(e.isAltDown()){ funguje zvlastne - pri stlacenom kolisku sa vykona
                     renderer.setMouseX(e.getX());
                     renderer.setMouseY(e.getY()); 
-                }    
+                //}    
             }
 
             @Override
@@ -132,6 +132,7 @@ public class GUI extends javax.swing.JFrame {
             @Override
             public void mouseReleased(MouseEvent e) {
                 renderer.setMiddleMouseButtonPressed(false);
+                renderer.setLeftMouseButtonPressed(false);
             }
 
             @Override
@@ -170,7 +171,7 @@ public class GUI extends javax.swing.JFrame {
         });
         
         
-        renderer = new Renderer(); 
+        renderer = new Renderer(openGlPanel.getWidth(), openGlPanel.getHeight()); 
         app = new Aplication();
         
         
@@ -232,7 +233,7 @@ public class GUI extends javax.swing.JFrame {
                 if(openValue == JFileChooser.APPROVE_OPTION){
                     models.clear();
                     newModel = modelManager.loadModel(new File(openingChooser.getSelectedFile().getAbsolutePath()));
-                    renderer = new Renderer(newModel);
+                    renderer = new Renderer(newModel, openGlPanel.getWidth(), openGlPanel.getHeight());
                     glCanvas.addGLEventListener(renderer);
                     
                     float planeX = newModel.getModelCenter().x;
@@ -379,7 +380,7 @@ public class GUI extends javax.swing.JFrame {
         //allParts = app.getListsOfParts(intersectionTriangles, modelWithMap);
         //app.getDividedTriangleFromRing(allParts, modelWithMap, plane);
         models.add(newModel); // docasne riesenie, kym nemame rozne modely
-        renderer = new Renderer(models);
+        renderer = new Renderer(models, openGlPanel.getWidth(), openGlPanel.getHeight());
         
         glCanvas.addGLEventListener(renderer);
         
@@ -401,6 +402,8 @@ public class GUI extends javax.swing.JFrame {
     // udalost: zmena velkosti okna (events -> component -> component resized)
     private void formComponentResized(java.awt.event.ComponentEvent evt) {                                      
         glCanvas.setSize(openGlPanel.getWidth(), openGlPanel.getHeight());
+        this.renderer.setPanelWidth(this.openGlPanel.getWidth());
+        this.renderer.setPanelHeight(this.openGlPanel.getHeight());
     } 
     
     /**
