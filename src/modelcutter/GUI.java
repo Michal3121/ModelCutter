@@ -241,7 +241,8 @@ public class GUI extends javax.swing.JFrame {
                     float planeZ = newModel.getModelCenter().z;
                     
                     planeCenter = new Point3f(planeX, planeY, planeZ);  
-                    renderer.setPlane(new Plane(planeCenter));
+                    renderer.setPlane(new GeneralPlane(planeCenter));
+                    GUI.this.initInformationPanel();
                 }     
             }  
         });
@@ -274,6 +275,23 @@ public class GUI extends javax.swing.JFrame {
             
         
         
+    }
+    
+    public void initInformationPanel(){
+        double width = this.newModel.getSizeX();
+        this.widthValueLabel.setText(Double.toString(width));
+        
+        double height = this.newModel.getSizeY();
+        this.heightValueLabel.setText(Double.toString(height));
+        
+        double length = this.newModel.getSizeZ();
+        this.lengthValueLabel.setText(Double.toString(length));
+        
+        long pointsCount = this.newModel.getVertices().size();
+        this.pointsCountLabel.setText(Long.toString(pointsCount));
+        
+        long triangleCount = this.newModel.getTriangleMesh().size();
+        this.trianglesCountLabel.setText(Long.toString(triangleCount));
     }
     
 
@@ -900,7 +918,7 @@ public class GUI extends javax.swing.JFrame {
         Set<Long> intersectionTriangles = new HashSet<>();
         List<List<Long>> allParts;
         
-        Plane plane = new Plane(planeCenter);
+        GeneralPlane plane = new GeneralPlane(planeCenter);
         //app.setComponent(modelWithMap);
         intersectionTriangles.addAll(app.getAllIntersectionTriangles(newModel, plane));
         app.divideIntersectingTriangles(intersectionTriangles, newModel, plane);

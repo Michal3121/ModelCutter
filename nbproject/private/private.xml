@@ -5,6 +5,8 @@
         <group>
             <file>file:/C:/projects/java/ModelCutter/src/modelcutter/Renderer.java</file>
             <file>file:/C:/projects/java/ModelCutter/src/modelcutter/GUI.java</file>
+            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/GeneralPlane.java</file>
+            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/CirclePlane.java</file>
             <file>file:/C:/projects/java/ModelCutter/src/modelcutter/Aplication.java</file>
         </group>
     </open-files>

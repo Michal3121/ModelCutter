@@ -5,6 +5,9 @@
  */
 package modelcutter;
 
+import javax.vecmath.GMatrix;
+import javax.vecmath.Matrix3d;
+import javax.vecmath.Point2f;
 import javax.vecmath.Point3f;
 import javax.vecmath.Vector3d;
 
@@ -12,19 +15,19 @@ import javax.vecmath.Vector3d;
  *
  * @author MICHAL
  */
-public class Plane {
+public class GeneralPlane {
     
     private Point3f centerPoint;
     private Point3f normal;
-    private double sizeX;
-    private double sizeY;
-    
-    public Plane(Point3f point, Point3f normal){
+    private Matrix3d transformationMatrix;
+
+    public GeneralPlane(Point3f point, Point3f normal){
         this.centerPoint = point;
         this.normal = normal;
+        this.transformationMatrix = this.computeTransformationMatrix();
     }
 
-    public Plane(Point3f centerPoint) {
+    public GeneralPlane(Point3f centerPoint) {
         this.centerPoint = centerPoint;
         //this.normal = new Point3f(1.0f, -1.0f, 0.0f);
         this.normal = new Point3f(0.0f, 1.0f, 0.0f);
@@ -45,6 +48,14 @@ public class Plane {
 
     public void setNormal(Point3f normal) {
         this.normal = normal;
+    }
+    
+    public Matrix3d getTransformationMatrix() {
+        return transformationMatrix;
+    }
+
+    public void setTransformationMatrix(Matrix3d transformationMatrix) {
+        this.transformationMatrix = transformationMatrix;
     }
     
     /**
@@ -124,6 +135,56 @@ public class Plane {
        
         //double sgn = Math.signum(normalVec.dot(coordVec) - distance); // povodne testovane
         //return sgn == 0;
+    }
+    
+    private Vector3d getPerpendicularVector(Vector3d inputVec){
+        if(inputVec.length() == 0.0){
+            System.out.println("Chyba ///////");
+        }
+        if(inputVec.x == 0.0){
+            return new Vector3d(1, 0, 0);
+        }
+        if(inputVec.y == 0.0){
+            return new Vector3d(0, 1, 0);
+        }
+        if(inputVec.z == 0.0){
+            return new Vector3d(0, 0, 1);
+        }
+        
+        double z = (inputVec.x + inputVec.y) / inputVec.z;
+        return new Vector3d(1, 1, -z);
+    }
+    
+    private Matrix3d computeTransformationMatrix(){
+        Vector3d normalVec = new Vector3d(this.normal.x, this.normal.y, this.normal.z);
+        Vector3d perpendicVec1 = this.getPerpendicularVector(normalVec);
+        Vector3d perpendicVec2 = new Vector3d(0, 0, 0);
+        perpendicVec2.cross(normalVec, perpendicVec1);
+        
+        Matrix3d transformMatrix = new Matrix3d(perpendicVec1.x, perpendicVec2.x, normalVec.x,
+                                                perpendicVec1.y, perpendicVec2.y, normalVec.y,
+                                                perpendicVec1.z, perpendicVec2.z, normalVec.z);
+        return transformMatrix;
+    }
+    
+    private Point2f getProjectionPoint(Point3f point3D){
+        GMatrix vector = new GMatrix(3, 1, new double[] {(double) point3D.x, 
+                                                         (double) point3D.y, 
+                                                         (double) point3D.z});
+        GMatrix matrix = new GMatrix(3, 3);
+        matrix.set(this.transformationMatrix);
+        
+        GMatrix result = new GMatrix(3, 1); 
+        result.mul(matrix, vector);
+        
+        return new Point2f((float) result.getElement(0, 0), (float) result.getElement(0, 1));
+    }
+    
+    public Point2f getCenteredProjectionPoint(Point3f point3D){
+        Point2f projectPoint = this.getProjectionPoint(point3D);
+        Point2f projectCenter = this.getProjectionPoint(this.centerPoint);
+        
+        return new Point2f(projectPoint.x - projectCenter.x, projectPoint.y - projectCenter.y);
     }
     
     /*

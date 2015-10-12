@@ -58,7 +58,7 @@ public class Renderer  implements GLEventListener {
     private List<Model> listOfModels;
     private Model model;
     private List<Point3f> ringList = new ArrayList<>();
-    private Plane plane;
+    private GeneralPlane plane;
     private boolean isMouseFirstPressed = true;
     private double prevNormMouseX = /*0*/ -1;
     private double prevNormMouseY = /*0*/ -1;
@@ -131,11 +131,11 @@ public class Renderer  implements GLEventListener {
         this.ringList = ringList;
     }
 
-    public Plane getPlane() {
+    public GeneralPlane getPlane() {
         return plane;
     }
 
-    public void setPlane(Plane plane) {
+    public void setPlane(GeneralPlane plane) {
         this.plane = plane;
     }
     
@@ -523,7 +523,7 @@ public class Renderer  implements GLEventListener {
         }
     }
     
-    public void drawSquarePlane(Plane plane, int size, GL2 gl){
+    public void drawSquarePlane(GeneralPlane plane, int size, GL2 gl){
         
         Point3f centerOfPlane = plane.getCenterPoint();
         gl.glTranslatef(centerOfPlane.x, centerOfPlane.y, centerOfPlane.z);
