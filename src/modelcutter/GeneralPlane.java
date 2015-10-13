@@ -157,9 +157,12 @@ public class GeneralPlane {
     
     private Matrix3d computeTransformationMatrix(){
         Vector3d normalVec = new Vector3d(this.normal.x, this.normal.y, this.normal.z);
+        normalVec.normalize();
         Vector3d perpendicVec1 = this.getPerpendicularVector(normalVec);
+        perpendicVec1.normalize();
         Vector3d perpendicVec2 = new Vector3d(0, 0, 0);
         perpendicVec2.cross(normalVec, perpendicVec1);
+        perpendicVec2.normalize();
         
         Matrix3d transformMatrix = new Matrix3d(perpendicVec1.x, perpendicVec2.x, normalVec.x,
                                                 perpendicVec1.y, perpendicVec2.y, normalVec.y,
@@ -177,7 +180,7 @@ public class GeneralPlane {
         GMatrix result = new GMatrix(3, 1); 
         result.mul(matrix, vector);
         
-        return new Point2f((float) result.getElement(0, 0), (float) result.getElement(0, 1));
+        return new Point2f((float) result.getElement(0, 0), (float) result.getElement(1, 0));
     }
     
     public Point2f getCenteredProjectionPoint(Point3f point3D){

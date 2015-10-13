@@ -12,7 +12,7 @@ import javax.vecmath.Point3f;
  *
  * @author MICHAL
  */
-public class CirclePlane extends GeneralPlane {
+public class CircularPlane extends GeneralPlane implements Plane {
     
     private float radius;
 
@@ -24,7 +24,7 @@ public class CirclePlane extends GeneralPlane {
         this.radius = radius;
     }
     
-    public CirclePlane(Point3f point, Point3f normal, float radius){
+    public CircularPlane(Point3f point, Point3f normal, float radius){
         super(point, normal);
         this.radius = radius;
     }

@@ -241,7 +241,7 @@ public class GUI extends javax.swing.JFrame {
                     float planeZ = newModel.getModelCenter().z;
                     
                     planeCenter = new Point3f(planeX, planeY, planeZ);  
-                    renderer.setPlane(new GeneralPlane(planeCenter));
+                    renderer.setPlane(new CircularPlane(planeCenter, new Point3f(0,1,0), 50));
                     GUI.this.initInformationPanel();
                 }     
             }  
@@ -918,7 +918,7 @@ public class GUI extends javax.swing.JFrame {
         Set<Long> intersectionTriangles = new HashSet<>();
         List<List<Long>> allParts;
         
-        GeneralPlane plane = new GeneralPlane(planeCenter);
+        Plane plane = new CircularPlane(planeCenter, new Point3f(0,1,0), 50);
         //app.setComponent(modelWithMap);
         intersectionTriangles.addAll(app.getAllIntersectionTriangles(newModel, plane));
         app.divideIntersectingTriangles(intersectionTriangles, newModel, plane);

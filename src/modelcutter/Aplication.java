@@ -42,7 +42,7 @@ public class Aplication {
      *         are intersecting with a plane or an empty collection 
      *         if the model doesn´t intersecting with the plane
      */
-    public Collection<Long> getAllIntersectionTriangles(Model model, GeneralPlane plane){
+    public Collection<Long> getAllIntersectionTriangles(Model model, Plane plane){
         Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
         Map<Long, MVertex> triangleVertices = model.getVertices(); 
         Set<Long> intersectionTriangles = new HashSet<>();
@@ -127,7 +127,7 @@ public class Aplication {
         return allParts;
     }
     
-    public Model getDividedTriangleFromRing(List<List<Long>> listsOfParts,  Model model, GeneralPlane plane){
+    public Model getDividedTriangleFromRing(List<List<Long>> listsOfParts,  Model model, Plane plane){
         Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
         Map<Long, MVertex> triangleVertices = model.getVertices();
         long verticesID = triangleVertices.size();
@@ -215,7 +215,7 @@ public class Aplication {
      * @return a model with new smaller triangles, if some triangle is intersecting 
      *         with plane or the same model if does not 
      */
-    public Model divideIntersectingTriangles(Collection<Long> intersectionTriangles, Model model, GeneralPlane plane){ // POZOR na nazov intersection
+    public Model divideIntersectingTriangles(Collection<Long> intersectionTriangles, Model model, Plane plane){ // POZOR na nazov intersection
         Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
         Map<Long, MVertex> triangleVertices = model.getVertices();
         long verticesID = triangleVertices.size();
@@ -296,7 +296,7 @@ public class Aplication {
      *         which are separated from each other and also has
      *         no intersection triangles 
      */
-    public Model updateAndDivideModel(Model model, GeneralPlane plane){
+    public Model updateAndDivideModel(Model model, Plane plane){
         Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
         Map<Long, MVertex> triangleVertices = model.getVertices();
         
