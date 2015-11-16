@@ -90,4 +90,27 @@ public class MTriangle {
                             this.triangleID, Arrays.toString(this.triangleVertices), 
                             this.adjacentTriangles.toString());
     }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 73 * hash + (int) (this.triangleID ^ (this.triangleID >>> 32));
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final MTriangle other = (MTriangle) obj;
+        if (this.triangleID != other.triangleID) {
+            return false;
+        }
+        return true;
+    }
+    
 }

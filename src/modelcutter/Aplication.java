@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.vecmath.Point2f;
 import javax.vecmath.Point3f;
 import javax.vecmath.Vector3d;
 
@@ -480,6 +481,167 @@ public class Aplication {
         vector2.normalize();
         
         return Math.toDegrees(Math.acos(vector1.dot(vector2))) ;
+    }
+    
+    private Collection<Long> getBoundaryTrianglesIDs(Model model, Plane plane){
+        Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
+        Map<Long, MVertex> triangleVertices = model.getVertices(); 
+        Set<Long> boundaryTriangles = new HashSet<>(); // boundary under the plane
+         
+        for(long triangleID: triangleMesh.keySet()){
+            MTriangle currentTriangle = triangleMesh.get(triangleID);
+            List<Long> adjacentTriangles = currentTriangle.getAdjacentTriangles();
+            
+            if(adjacentTriangles.size() < 3){
+                long[] verticesIDs = currentTriangle.getTriangleVertices();
+                
+                for(long vertexID : verticesIDs){
+                    MVertex currentVertex = triangleVertices.get(vertexID);
+                    
+                    if(plane.isPointUnderPlane(currentVertex.getVertex())){
+                        boundaryTriangles.add(triangleID);
+                    }
+                }
+            }
+        }
+        
+        return Collections.unmodifiableCollection(boundaryTriangles);
+    }
+    
+    private List<List<MVertex>> getRingsOfBoundaryVertices(Collection<Long> triangles, Model model, Plane plane){
+        Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
+        Map<Long, MVertex> triangleVertices = model.getVertices();
+        
+        List<Long> boundaryTriangles = new ArrayList<>(triangles);
+        List<List<MVertex>> listOfRings = new ArrayList<>();
+        List<MVertex> ringOfVertices = new ArrayList<>();
+        
+        MVertex firstVertexInCurrRing = null;
+        MVertex nextVertex = null;
+        
+        while(!boundaryTriangles.isEmpty()){
+            
+            if(firstVertexInCurrRing == null){
+                long triangleID = boundaryTriangles.get(0);
+                MTriangle firstTriangleInCurrRing = triangleMesh.get(triangleID);
+                long[] verticesIDs = firstTriangleInCurrRing.getTriangleVertices();
+                
+                for(int k = 0; k < 3; k++){
+                    MVertex vertex = triangleVertices.get(verticesIDs[k]);
+                    Point3f point = vertex.getVertex(); 
+                   
+                    if(plane.isPointBelongToPlane(point)){
+                       firstVertexInCurrRing = vertex;
+                       /*Set<Long> vertexAux = new HashSet<>(firstVertexInCurrRing.getAdjacentTriangles());
+                       Set<Long> allTrianglesAux = new HashSet<>(triangleMesh.keySet());
+                       
+                       vertexAux.retainAll(allTrianglesAux);
+                       vertexAux.remove(firstTriangleInCurrRing.getTriangleID());*/
+                       break; 
+                    }
+                }
+                
+                nextVertex = firstVertexInCurrRing;
+                ringOfVertices = new ArrayList<>();
+                //boundaryTriangles.remove(firstTriangleInCurrRing.getTriangleID());
+            }
+            
+            do{
+                MVertex currVertex = nextVertex;
+                ringOfVertices.add(nextVertex);
+                
+                Set<Long> vertexAux = new HashSet<>(currVertex.getAdjacentTriangles());
+                Set<Long> allTrianglesAux = new HashSet<>(boundaryTriangles);
+                
+                vertexAux.retainAll(allTrianglesAux); // zostava vzdy iba jeden trojuholnik, predchadzajuci mazeme
+                long triangleID = vertexAux.iterator().next();
+                MTriangle currTriangle = triangleMesh.get(triangleID);
+                long[] verticesIDs = currTriangle.getTriangleVertices();
+                
+                for(int k = 0; k < 3; k++){
+                    MVertex vertex = triangleVertices.get(verticesIDs[k]);
+                    Point3f point = vertex.getVertex(); 
+                   
+                    if(plane.isPointBelongToPlane(point) && !vertex.equals(currVertex)){
+                        nextVertex = vertex;
+                    }
+                }
+                
+                boundaryTriangles.remove(currTriangle.getTriangleID());
+                
+            }while(!nextVertex.equals(firstVertexInCurrRing));
+            
+            listOfRings.add(ringOfVertices);
+            firstVertexInCurrRing = null;
+        }
+        return listOfRings;
+    }
+    
+    private List<HalfEdgeStructure> makeHalfEdgeStructure(List<List<MVertex>> allRings, Plane plane){
+        List<HalfEdgeStructure> allHEStructures = new ArrayList<>();
+        long halfEdgeID = 0;
+        long faceID = 0;
+        
+        for(List<MVertex> ring : allRings){
+            HalfEdgeStructure halfEdgeStruct = new HalfEdgeStructure();
+            List<HalfEdge> auxList = new ArrayList<>();
+
+            MVertex mVertex = ring.get(ring.size() - 1);
+            HalfEdge prevHalfEdge = new HalfEdge(halfEdgeID, mVertex.getVertexID());
+            HalfEdge firstHalfEdge = prevHalfEdge;
+            HEFace heFace = new HEFace(faceID, halfEdgeID);
+            halfEdgeID++;
+
+            for(int i = 0; i < ring.size(); i++){
+                mVertex = ring.get(i);
+                Point3f vertex3D = mVertex.getVertex();
+                Point2f vertex2D = plane.getCenteredProjectionPoint(vertex3D);
+                HalfEdge currHalfEdge;
+                HEVertex heVertex;
+
+                if(i == ring.size() - 1){
+                    currHalfEdge = firstHalfEdge;
+                    heVertex = new HEVertex(mVertex.getVertexID(), vertex2D, /*firstHalfEdge.getId()*/ -1);  
+                }else{
+                    currHalfEdge = new HalfEdge(halfEdgeID, mVertex.getVertexID());
+                    heVertex = new HEVertex(mVertex.getVertexID(), vertex2D, /*halfEdgeID*/ -1);
+
+                    halfEdgeID++;    
+                }
+                currHalfEdge.setFace(faceID);
+                currHalfEdge.setPrev(prevHalfEdge.getId());
+                prevHalfEdge = currHalfEdge;
+                halfEdgeStruct.addVertex(heVertex);
+                auxList.add(currHalfEdge);
+            }
+
+            for(int i = 0; i < auxList.size(); i++){
+                HalfEdge currHalfEdge = auxList.get(i);
+                HalfEdge nextHalfEdge = auxList.get((i + 1) % auxList.size());
+
+                currHalfEdge.setNext(nextHalfEdge.getId());
+                long currVertexID = currHalfEdge.getTargetVertex();
+                HEVertex currVertex = halfEdgeStruct.getHEVertex(currVertexID);
+                currVertex.setLeavingHalfEdgeID(nextHalfEdge.getId());
+                
+                halfEdgeStruct.addHalfEdge(currHalfEdge);
+            }
+            halfEdgeStruct.addFace(heFace);
+            faceID++;
+            allHEStructures.add(halfEdgeStruct);
+        }
+        
+        return allHEStructures;
+    }
+    
+    public void findBoundaryPoplygonsFromCut(Model model, Plane plane){
+        List<Long> boundaryTriangles = new ArrayList<>(this.getBoundaryTrianglesIDs(model, plane));
+        List<List<MVertex>> allRings = this.getRingsOfBoundaryVertices(boundaryTriangles, model, plane);
+        List<HalfEdgeStructure> allPolygons = new ArrayList<>(this.makeHalfEdgeStructure(allRings, plane));
+        
+        HalfEdgeManagerImpl halfEdgeManager = new HalfEdgeManagerImpl();
+        List<HalfEdgeStructure> polygonsWithHoles = halfEdgeManager.findAllPolygons(allPolygons);
+        
     }
     
     private boolean IsPointInPolygon(Point3f point, List<Long> polygon, Model model)

@@ -83,6 +83,18 @@ public class GeneralPlane {
         return sgn1 != sgn2;
     }
     
+    public boolean isPointUnderPlane(Point3f coord){
+        Vector3d normalVec = new Vector3d(this.normal.x, this.normal.y, this.normal.z);
+        Vector3d centerVec = new Vector3d(this.centerPoint.x, this.centerPoint.y, this.centerPoint.z);
+        Vector3d coordVec = new Vector3d(coord.x, coord.y, coord.z);
+        
+        double distance = normalVec.dot(centerVec);
+        double ret = normalVec.dot(coordVec) - distance;
+        ret = (double) Math.round(ret * 1000) / 1000;
+        
+        return ret < 0;
+    }
+    
     /**
      * This method return a new point of a Point3f value which lies 
      * on a line segment connecting a point coord1 and point coord2.
@@ -167,6 +179,7 @@ public class GeneralPlane {
         Matrix3d transformMatrix = new Matrix3d(perpendicVec1.x, perpendicVec2.x, normalVec.x,
                                                 perpendicVec1.y, perpendicVec2.y, normalVec.y,
                                                 perpendicVec1.z, perpendicVec2.z, normalVec.z);
+        transformMatrix.invert();
         return transformMatrix;
     }
     
@@ -179,6 +192,10 @@ public class GeneralPlane {
         
         GMatrix result = new GMatrix(3, 1); 
         result.mul(matrix, vector);
+        
+        if(Math.round(result.getElement(2, 0) * 1000) / 1000 != 0){
+            System.out.println("Chyba////////");
+        }
         
         return new Point2f((float) result.getElement(0, 0), (float) result.getElement(1, 0));
     }
