@@ -201,10 +201,14 @@ public class GeneralPlane {
     }
     
     public Point2f getCenteredProjectionPoint(Point3f point3D){
-        Point2f projectPoint = this.getProjectionPoint(point3D);
-        Point2f projectCenter = this.getProjectionPoint(this.centerPoint);
+        float xCentered = point3D.x - this.centerPoint.x;
+        float yCentered = point3D.y - this.centerPoint.y;
+        float zCentered = point3D.z - this.centerPoint.z;
         
-        return new Point2f(projectPoint.x - projectCenter.x, projectPoint.y - projectCenter.y);
+        Point3f pointCentered = new Point3f(xCentered, yCentered, zCentered);
+        Point2f projectPoint = this.getProjectionPoint(pointCentered);
+        
+        return new Point2f(projectPoint.x, projectPoint.y);
     }
     
     /*

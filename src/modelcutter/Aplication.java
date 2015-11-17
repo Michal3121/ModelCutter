@@ -642,6 +642,7 @@ public class Aplication {
         HalfEdgeManagerImpl halfEdgeManager = new HalfEdgeManagerImpl();
         List<HalfEdgeStructure> polygonsWithHoles = halfEdgeManager.findAllPolygons(allPolygons);
         
+        halfEdgeManager.divideIntoMonotonePieces(polygonsWithHoles.get(0));
     }
     
     private boolean IsPointInPolygon(Point3f point, List<Long> polygon, Model model)

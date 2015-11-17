@@ -6,7 +6,6 @@
 package modelcutter;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -56,7 +55,6 @@ public class HalfEdgeManagerImpl {
         HalfEdge nextHalfEdge = testRing.getHalfEdge(currHalfEdge.getNext());
         boolean ret = false;
         
-        //while(nextHalfEdge != firstHalfEdge){
         do{
             HEVertex currVertex = testRing.getHEVertex(currHalfEdge.getTargetVertex());
             HEVertex nextVertex = testRing.getHEVertex(nextHalfEdge.getTargetVertex());
@@ -69,7 +67,7 @@ public class HalfEdgeManagerImpl {
             
             currHalfEdge = nextHalfEdge;
             nextHalfEdge = testRing.getHalfEdge(currHalfEdge.getNext());
-        }while(nextHalfEdge != firstHalfEdge); 
+        }while(currHalfEdge != firstHalfEdge); 
         return ret;
     }
     
@@ -103,7 +101,7 @@ public class HalfEdgeManagerImpl {
             
             currHalfEdge = nextHalfEdge;
             nextHalfEdge = testRing.getHalfEdge(currHalfEdge.getNext());
-        }while(/*nextHalfEdge*/ currHalfEdge != firstHalfEdge);
+        }while(currHalfEdge != firstHalfEdge);
         
         areaSum = areaSum / 2.0;
         return areaSum > 0; 
@@ -126,9 +124,9 @@ public class HalfEdgeManagerImpl {
             
             currHalfEdge = nextHalfEdge;
             nextHalfEdge = testRing.getHalfEdge(currHalfEdge.getNext());
-        }while(/*nextHalfEdge*/ currHalfEdge != firstHalfEdge);
+        }while(currHalfEdge != firstHalfEdge);
         
-        return areaSum / 2;   
+        return Math.abs(areaSum / 2);   
     }
     
     private long getFirstHalfEdge(HalfEdgeStructure testRing){
@@ -166,7 +164,6 @@ public class HalfEdgeManagerImpl {
                 if(currHole.getAreaOfPolygon() < polygon.getAreaOfPolygon() && 
                    this.isPointInPolygon(vertexInHole, polygon)){
                     this.addHoleToPolygon(polygon, currHole);
-                    listOfHoles.remove(currHole);
                 }
             }
         }
@@ -213,7 +210,7 @@ public class HalfEdgeManagerImpl {
             HEVertex currVertex = polygon.getHEVertex(currHalfEdge.getTargetVertex());
             HEVertex oppositeHEVertex = new HEVertex(currVertex.getId(), 
                                                      currVertex.getVertex(), 
-                                                     /*currHalfEdge.getTargetVertex()*/ currHalfEdge.getId());
+                                                     currHalfEdge.getId());
             
             
             oppositeOrientationPolygon.addHalfEdge(oppositeHalfEdge);
@@ -247,20 +244,42 @@ public class HalfEdgeManagerImpl {
     
     public List<HalfEdgeStructure> findAllPolygons(List<HalfEdgeStructure> rings){
         List<HalfEdgeStructure> outerRings = this.findBoundaryRings(rings);
+        List<HalfEdgeStructure> outerRingsCounterClockWise = new ArrayList<>();
+        List<HalfEdgeStructure> holesClockWise = new ArrayList<>();
         
-        for(HalfEdgeStructure ring : outerRings){
-            if(this.isRingClockwise(ring)){
-                ring = this.changeOrientationOfPolygon(ring);
+        for(HalfEdgeStructure currRing : outerRings){
+            HalfEdgeStructure ringAux = currRing;
+            if(this.isRingClockwise(currRing)){
+                ringAux = this.changeOrientationOfPolygon(currRing);
             }
+            outerRingsCounterClockWise.add(ringAux);
         }
         
-        for(HalfEdgeStructure hole : rings){
-            if(!this.isRingClockwise(hole)){
-                hole = this.changeOrientationOfPolygon(hole);
+        for(HalfEdgeStructure currHole : rings){
+            HalfEdgeStructure holeAux = currHole;
+            if(!this.isRingClockwise(currHole)){
+                holeAux = this.changeOrientationOfPolygon(currHole);
             }
+            holesClockWise.add(holeAux);
         }
         
-        List<HalfEdgeStructure> polygonsWithHoles = this.createPolygonsWithHoles(outerRings, rings);
+        List<HalfEdgeStructure> polygonsWithHoles = this.createPolygonsWithHoles(outerRingsCounterClockWise, holesClockWise);
         return polygonsWithHoles;
+    }
+    
+    public List<HalfEdgeStructure> divideIntoMonotonePieces(HalfEdgeStructure polygon){
+        List<HalfEdgeStructure> monotonePieces = new ArrayList<>();
+        
+        List<HEVertex> sortedVertices = this.findSortedVertices(polygon);
+        
+        return monotonePieces;
+    }
+    
+    private List<HEVertex> findSortedVertices(HalfEdgeStructure polygon){
+        List<HEVertex> vertices = new ArrayList<>(polygon.getHEVertices());
+        
+        Collections.sort(vertices, new HEVertexPositionComparator());
+        
+        return vertices;
     }
 }

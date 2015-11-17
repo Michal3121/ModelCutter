@@ -3,22 +3,9 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/RectangularPlane.java</file>
-            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/HalfEdgeStructure.java</file>
-            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/HEFace.java</file>
-            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/SquaredPlane.java</file>
-            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/MVertex.java</file>
-            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/HalfEdge.java</file>
-            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/Aplication.java</file>
-            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/Renderer.java</file>
             <file>file:/C:/projects/java/ModelCutter/src/modelcutter/GUI.java</file>
-            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/MTriangle.java</file>
             <file>file:/C:/projects/java/ModelCutter/src/modelcutter/HalfEdgeManagerImpl.java</file>
-            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/CircularPlane.java</file>
-            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/PolygonAreaComparator.java</file>
-            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/HEVertex.java</file>
-            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/GeneralPlane.java</file>
-            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/Plane.java</file>
+            <file>file:/C:/projects/java/ModelCutter/src/modelcutter/Aplication.java</file>
         </group>
     </open-files>
 </project-private>

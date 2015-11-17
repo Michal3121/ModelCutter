@@ -5,6 +5,7 @@
  */
 package modelcutter;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -21,6 +22,7 @@ public class HEFace {
     public HEFace(long id, long innerHalfEdgeID){
         this.id = id;
         this.innerHalfEdgeID = innerHalfEdgeID;
+        this.holesHalfEdgeIDs = new ArrayList<>();
     }
 
     public long getId() {
