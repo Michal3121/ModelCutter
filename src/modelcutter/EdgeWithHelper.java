@@ -37,6 +37,14 @@ public class EdgeWithHelper {
         this.startEdgePoint = startEdgePoint;
     }
 
+    public HEVertex getEndEdgePoint() {
+        return endEdgePoint;
+    }
+
+    public void setEndEdgePoint(HEVertex endEdgePoint) {
+        this.endEdgePoint = endEdgePoint;
+    }
+    
     public Point2f getIntersectPoint() {
         return intersectPoint;
     }
