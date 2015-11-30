@@ -11,7 +11,7 @@ import javax.vecmath.Point2f;
  *
  * @author MICHAL
  */
-public class HEVertex {
+public class HEVertex /*implements Comparable<HEVertex>*/ {
     private final long id;
     private Point2f vertex;
     private long leavingHalfEdgeID;
@@ -63,5 +63,23 @@ public class HEVertex {
         }
         return true;
     }
-    
+
+    /*@Override
+    public int compareTo(HEVertex vert) {
+        Point2f point = vert.getVertex();
+        if(this.vertex.y < point.y){
+            return 1;
+        }
+        if(this.vertex.y > point.y){
+            return -1;
+        }
+        if(this.vertex.x > point.x){
+            return 1;
+        }
+        if(this.vertex.x < point.x){
+            return -1;
+        }
+        
+        return 0;
+    }*/
 }

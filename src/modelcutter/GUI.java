@@ -918,13 +918,15 @@ public class GUI extends javax.swing.JFrame {
         Set<Long> intersectionTriangles = new HashSet<>();
         List<List<Long>> allParts;
         
-        Plane plane = new CircularPlane(planeCenter, /*new Point3f(0,1,0)*/ new Point3f(1,-1,0) /*new Point3f(-1,1,0)*/ , 500);
+        Plane plane = new CircularPlane(planeCenter /*new Point3f(0,0,0)*/, new Point3f(0,1,0) /*new Point3f(-1,1,0)*/, 500);
+        //Plane plane = new CircularPlane(/*planeCenter*/ new Point3f(0,0,0), /*new Point3f(0,1,0)*/ new Point3f(0,-1,0) /*new Point3f(1,-1,0)*/ /*new Point3f(-1,1,0)*/ , 500);
         //app.setComponent(modelWithMap);
         intersectionTriangles.addAll(app.getAllIntersectionTriangles(newModel, plane));
         app.divideIntersectingTriangles(intersectionTriangles, newModel, plane);
         //app.divideModel(modelWithMap, plane);
         app.setComponent(newModel);
-        app.findBoundaryPoplygonsFromCut(newModel, plane);
+        List<HalfEdgeStructure> allPolygons = app.findBoundaryPoplygonsFromCut(newModel, plane);
+        app.divideModel(newModel, allPolygons, plane);
         //app.findBoundaryPolygons(newModel, plane);
         //allParts = app.getListsOfParts(intersectionTriangles, modelWithMap);
         //app.getDividedTriangleFromRing(allParts, modelWithMap, plane);

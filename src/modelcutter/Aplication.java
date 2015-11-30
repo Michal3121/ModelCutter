@@ -16,6 +16,9 @@ import java.util.Set;
 import javax.vecmath.Point2f;
 import javax.vecmath.Point3f;
 import javax.vecmath.Vector3d;
+import poly2Tri.Polygon;
+import static poly2Tri.Triangulation.triangulate;
+
 
 
 /**
@@ -634,15 +637,270 @@ public class Aplication {
         return allHEStructures;
     }
     
-    public void findBoundaryPoplygonsFromCut(Model model, Plane plane){
+    private List<List<MVertex>> fillTestList(){
+        List<List<MVertex>> allRings = new ArrayList<>();
+        List<MVertex> splitPolygon = new ArrayList<>();
+        List<MVertex> mergePolygon = new ArrayList<>();
+        List<MVertex> nonMonotonePolygon = new ArrayList<>();
+        
+        splitPolygon.add(new MVertex(0, 0, new Point3f(4,0,10)));
+        splitPolygon.add(new MVertex(1, 0, new Point3f(6,0,2)));
+        splitPolygon.add(new MVertex(2, 0, new Point3f(9,0,6)));
+        splitPolygon.add(new MVertex(3, 0, new Point3f(12,0,1)));
+        splitPolygon.add(new MVertex(4, 0, new Point3f(14,0,8)));
+        
+        mergePolygon.add(new MVertex(0, 0, new Point3f(4,0,12)));
+        mergePolygon.add(new MVertex(1, 0, new Point3f(6,0,2)));
+        mergePolygon.add(new MVertex(2, 0, new Point3f(9,0,2)));
+        mergePolygon.add(new MVertex(3, 0, new Point3f(12,0,2)));
+        mergePolygon.add(new MVertex(4, 0, new Point3f(12,0,10)));
+        mergePolygon.add(new MVertex(5, 0, new Point3f(8,0,8)));
+        
+        nonMonotonePolygon.add(new MVertex(0, 0, new Point3f(6,0,12)));
+        nonMonotonePolygon.add(new MVertex(1, 0, new Point3f(3,0,5)));
+        nonMonotonePolygon.add(new MVertex(2, 0, new Point3f(6,0,2)));
+        nonMonotonePolygon.add(new MVertex(3, 0, new Point3f(7,0,6)));
+        nonMonotonePolygon.add(new MVertex(4, 0, new Point3f(10,0,6)));
+        
+        //allRings.add(nonMonotonePolygon);
+        //allRings.add(splitPolygon);
+        allRings.add(mergePolygon);
+        return allRings;
+    }
+    
+    public List<HalfEdgeStructure> findBoundaryPoplygonsFromCut(Model model, Plane plane){
         List<Long> boundaryTriangles = new ArrayList<>(this.getBoundaryTrianglesIDs(model, plane));
         List<List<MVertex>> allRings = this.getRingsOfBoundaryVertices(boundaryTriangles, model, plane);
+        //List<List<MVertex>> allRings = this.fillTestList();
         List<HalfEdgeStructure> allPolygons = new ArrayList<>(this.makeHalfEdgeStructure(allRings, plane));
         
         HalfEdgeManagerImpl halfEdgeManager = new HalfEdgeManagerImpl();
         List<HalfEdgeStructure> polygonsWithHoles = halfEdgeManager.findAllPolygons(allPolygons);
         
-        halfEdgeManager.divideIntoMonotonePieces(polygonsWithHoles.get(0));
+        //halfEdgeManager.divideIntoMonotonePieces(polygonsWithHoles.get(0));
+        
+        int[] numContures1 = {5,4,3}; 
+        //double[][] vertices = {{0, 0}, {7, 0}, {4, 4}, {2, 2}, {2, 3}, {3, 3}};
+        //double[][] vertices2 = {{0,0},{2,0},{2,2},{0,2}};
+        double[][] vertices3 = {{2,2},{10,2},{12,7},{10,14},{2,14},{5,7},{5,10},{8,10},{8,7},{8,3},{5,3},{6,5}};
+        List list = new ArrayList();
+        list = triangulate(3, numContures1, vertices3);
+        
+        return polygonsWithHoles;
+    }
+    
+    public List<Model> divideModel(Model cutModel, List<HalfEdgeStructure> listOfPolygons, Plane plane){
+        List<Model> listOfModels = new ArrayList<>();
+        List<MTriangle> allNewTriangles = this.triangulatePolygons(listOfPolygons);
+        
+        this.addNewTrianglesToModel(cutModel, allNewTriangles, plane);
+        
+        ModelManagerImpl modelmanager = new ModelManagerImpl();
+        Model updatedModel = modelmanager.updateAdjacentTriangles(cutModel);
+        
+        this.setComponent(cutModel);
+        return listOfModels;
+    }
+    
+    private List<MTriangle> triangulatePolygons(List<HalfEdgeStructure> listOfPolygons){
+        HalfEdgeManagerImpl halfEdgeManager = new HalfEdgeManagerImpl();
+        List<MTriangle> allNewTriangles = new ArrayList<>();
+        
+        for(HalfEdgeStructure currPolygon : listOfPolygons){
+            List<HEVertex> outherRing = halfEdgeManager.findOutherRing(currPolygon);
+            List<List<HEVertex>> holes = halfEdgeManager.findAllHolesRings(currPolygon);
+            
+            int numContures = 1;
+            int numVerticesInContures[] = new int[1 + holes.size()];
+            numVerticesInContures[0] = outherRing.size();
+            List<HEVertex> allVertices = new ArrayList<>();
+            allVertices.addAll(outherRing);
+            int i = 1;
+            
+            for(List<HEVertex> currHole : holes){
+                numVerticesInContures[i] = currHole.size();
+                allVertices.addAll(currHole);
+                numContures++;
+                i++;
+            }
+            
+            double[][] verticesInArray = this.transformVerticesListToArray(allVertices);
+            
+            List<List<Integer>> triangles = triangulate(numContures, numVerticesInContures, verticesInArray);
+            
+            allNewTriangles.addAll(this.transformTriangleFromTriangulationToListOfMTriangles(triangles, allVertices));
+        }
+        
+        return allNewTriangles;
+    }
+    
+    private double[][] transformVerticesListToArray(List<HEVertex> allVertices){
+        int size = allVertices.size();
+        double[][] verticesInArray = new double[size][2];
+        
+        for(int i = 0; i < allVertices.size(); i++){
+            HEVertex currVertex = allVertices.get(i);
+            Point2f currPoint = currVertex.getVertex();
+            
+            double x = currPoint.x;
+            double y = currPoint.y;
+            
+            verticesInArray[i][0] = x;
+            verticesInArray[i][1] = y;
+        }
+        
+        return verticesInArray;
+    }
+    
+    private List<MTriangle> transformTriangleFromTriangulationToListOfMTriangles
+                            (List<List<Integer>> triangleFromTriangulation, 
+                             List<HEVertex> allHEVertices)
+    {
+        List<MTriangle> listOfMVertices = new ArrayList<>();
+        
+        for(List<Integer> currTriangle : triangleFromTriangulation){
+            long[] triangleVerticesIDs = new long[3];
+            
+            for(int i = 0; i < 3; i++){
+                int vertexIndex = currTriangle.get(i);
+                HEVertex heVertex = allHEVertices.get(vertexIndex);
+                triangleVerticesIDs[i] = heVertex.getId();
+            }
+            
+            MTriangle newTriangle = new MTriangle(-1, -1, new Point3f(1,0,0), triangleVerticesIDs);
+            listOfMVertices.add(newTriangle);
+        }
+        
+        return listOfMVertices;
+    }
+                            
+    private Model addNewTrianglesToModel(Model cutModel, List<MTriangle> newTriangles, Plane plane){
+        List<Long> boundaryTrianglesIDs = new ArrayList<>();
+        boundaryTrianglesIDs.addAll(this.getBoundaryTrianglesIDs(cutModel, plane));
+        
+        List<Long> trianglesBelowPlane = this.findAllTrianglesBelowPlane(cutModel, boundaryTrianglesIDs, plane);
+        List<Long> trianglesAbovePlane = new ArrayList<>(boundaryTrianglesIDs);
+        trianglesAbovePlane.removeAll(trianglesBelowPlane);
+        
+        this.addTrianglesBelowPlane(cutModel, trianglesBelowPlane, newTriangles, plane);
+        this.addVerticesAbovePlane(cutModel, trianglesAbovePlane, newTriangles, plane);
+        
+        return cutModel;
+    }
+    
+    private List<Long> findAllTrianglesBelowPlane(Model cutModel, List<Long> allBoundaryTriangles, Plane plane){
+        Map<Long, MTriangle> triangleMesh = cutModel.getTriangleMesh();
+        Map<Long, MVertex> triangleVertices = cutModel.getVertices(); 
+        List<Long> trianglesBelowPlane = new ArrayList<>();
+        
+        for(long triangleID : allBoundaryTriangles){
+            MTriangle currTriangle = triangleMesh.get(triangleID);
+            long[] verticesIDs = currTriangle.getTriangleVertices();
+            
+            for(int k = 0; k < 3; k++){
+                Point3f vertex = triangleVertices.get(verticesIDs[k]).getVertex();
+                
+                if(plane.isPointUnderPlane(vertex)){
+                    trianglesBelowPlane.add(triangleID);
+                    break;
+                }
+            }
+        }
+        
+        return trianglesBelowPlane;
+    }
+    
+    private Model addTrianglesBelowPlane(Model cutModel, List<Long> trianglesBelowPlane, 
+                                         List<MTriangle> newTriangles, Plane plane)
+    {
+        Map<Long, MTriangle> triangleMesh = cutModel.getTriangleMesh();
+        Map<Long, MVertex> triangleVertices = cutModel.getVertices();
+        
+        long vertexID = modelManager.findMaxVertexID(cutModel) + 1;
+        long triangleID = modelManager.findMaxTriangleID(cutModel) + 1;
+        
+        Map<Point3f, Long> auxVerticesMap = new HashMap<>();
+        Point3f planeNorm = plane.getNormal();
+        Point3f newTriangleNorm = new Point3f(-planeNorm.x, -planeNorm.y, -planeNorm.z);
+        
+        for(MTriangle currNewTriangle : newTriangles){
+            long[] verticesIDs = currNewTriangle.getTriangleVertices();
+            long[] newVerticesIDs = new long[3];
+            
+            for(int i = 0; i < 3; i++){
+                MVertex currVertex = triangleVertices.get(verticesIDs[i]);
+                Point3f currPoint = currVertex.getVertex();
+                
+                if(plane.isPointBelongToPlane(currPoint)){
+                    
+                    if(!auxVerticesMap.containsKey(currPoint)){
+                        List<Long> adjacentTriangles = currVertex.getAdjacentTriangles();
+
+                        List<Long> adjacentTrianglesBelowPlane = this.findAllTrianglesBelowPlane(cutModel, 
+                                                                                                 adjacentTriangles, 
+                                                                                                 plane);
+
+                        List<Long> newAdjacentTriangles = new ArrayList<>(adjacentTriangles);
+                        newAdjacentTriangles.removeAll(adjacentTrianglesBelowPlane);
+                        currVertex.setAdjacentTriangles(newAdjacentTriangles); // vymazeme vsetkych dolnych susedov v povodnom trojuholniku 
+                        
+                        for(long currTriangleID : adjacentTrianglesBelowPlane){ // vymena starych bodov v trojuholnikoch pod rovinou za nove
+                            MTriangle currTriangle = triangleMesh.get(currTriangleID);
+                            long[] triVertices = currTriangle.getTriangleVertices();
+                            
+                            for(int j = 0; j < 3; j++){
+                                if(triVertices[j] == currVertex.getVertexID()){
+                                    triVertices[j] = vertexID;
+                                }
+                            }
+                        }
+                        
+                        MVertex newVertex = new MVertex(vertexID, currVertex.getObjectID(), currVertex.getVertex());
+                        newVertex.setAdjacentTriangles(adjacentTrianglesBelowPlane);
+                        newVertex.addAdjacentTriangles(triangleID);
+                        newVerticesIDs[i] = vertexID;
+                        auxVerticesMap.put(currPoint, vertexID);
+                        triangleVertices.put(vertexID, newVertex);
+                        
+                        vertexID++;
+                    }else{
+                        long auxIndex = auxVerticesMap.get(currPoint);
+                        MVertex processedVertex = triangleVertices.get(auxIndex);
+                        processedVertex.addAdjacentTriangles(triangleID);
+                        newVerticesIDs[i] = auxIndex;
+                    }
+                }
+            }
+            MTriangle newTriangle = new MTriangle(triangleID, 0, newTriangleNorm, newVerticesIDs);
+            triangleMesh.put(triangleID, newTriangle);
+            triangleID++;
+        }
+        
+        return cutModel;
+    }
+    
+    private Model addVerticesAbovePlane(Model cutModel, List<Long> trianglesAbovePlane, 
+                                         List<MTriangle> newTriangles, Plane plane)
+    {
+        Map<Long, MTriangle> triangleMesh = cutModel.getTriangleMesh();
+        Map<Long, MVertex> triangleVertices = cutModel.getVertices();
+        
+        long triangleID = modelManager.findMaxTriangleID(cutModel) + 1;
+        
+        Point3f newTriangleNorm = plane.getNormal();
+        for(MTriangle currNewTriangle : newTriangles){
+            long[] verticesIDs = currNewTriangle.getTriangleVertices();
+            
+            for(int i = 0; i < 3; i++){
+                MVertex triangleVertex = triangleVertices.get(verticesIDs[i]);
+                triangleVertex.addAdjacentTriangles(triangleID);
+            }
+            
+            MTriangle newTriangle = new MTriangle(triangleID, 0, newTriangleNorm, verticesIDs);
+            triangleMesh.put(triangleID, newTriangle);
+            triangleID++;
+        }
+        return cutModel;
     }
     
     private boolean IsPointInPolygon(Point3f point, List<Long> polygon, Model model)

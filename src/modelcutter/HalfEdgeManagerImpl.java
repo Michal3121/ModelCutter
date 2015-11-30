@@ -110,7 +110,48 @@ public class HalfEdgeManagerImpl {
         }while(currHalfEdge != firstHalfEdge);
         
         areaSum = areaSum / 2.0;
-        return areaSum > 0; 
+        
+        if(this.isRingConvex(testRing)){
+            return areaSum < 0;
+        }
+        return areaSum < 0; // > 0
+    }
+    
+    private boolean isRingConvex(HalfEdgeStructure testRing){
+        List<HEFace> faces = new ArrayList<>(testRing.getFaces());
+        HEFace face = faces.get(0);
+        long firstHalfEdgeID = face.getInnerHalfEdgeID();
+        HalfEdge firstHalfEdge = testRing.getHalfEdge(firstHalfEdgeID);
+        HalfEdge currHalfEdge = firstHalfEdge;
+        HalfEdge prevHalfEdge = testRing.getHalfEdge(currHalfEdge.getPrev());
+        HalfEdge nextHalfEdge = testRing.getHalfEdge(currHalfEdge.getNext());
+        boolean firstIteration = true;
+        boolean firstCrossProduct = false;
+        
+        do{
+            HEVertex prevVertex = testRing.getHEVertex(prevHalfEdge.getTargetVertex());
+            HEVertex currVertex = testRing.getHEVertex(currHalfEdge.getTargetVertex());
+            HEVertex nextVertex = testRing.getHEVertex(nextHalfEdge.getTargetVertex());
+            Point2f prevPoint = prevVertex.getVertex();
+            Point2f currPoint = currVertex.getVertex();
+            Point2f nextPoint = nextVertex.getVertex();
+            
+            if(firstIteration){
+                firstCrossProduct = this.isInteriorAngleLessThanPI(currPoint, prevPoint, nextPoint);
+                firstIteration = false;
+                //break;
+            }
+            
+            if(this.isInteriorAngleLessThanPI(currPoint, prevPoint, nextPoint) != firstCrossProduct){
+                return false;
+            }
+            
+            prevHalfEdge = currHalfEdge;
+            currHalfEdge = nextHalfEdge;
+            nextHalfEdge = testRing.getHalfEdge(currHalfEdge.getNext());
+        }while(currHalfEdge != firstHalfEdge);
+        
+        return true;
     }
     
     private int computeAreaOfPolygon(HalfEdgeStructure testRing){
@@ -293,8 +334,10 @@ public class HalfEdgeManagerImpl {
                                                                    startVertex, 
                                                                    endVertex);
                 edgeWithHelper.setHelper(startVertex);
+                edgeWithHelper.setIntersectPoint(startVertex.getVertex());
                 edgeTree.add(edgeWithHelper);
                 sortedVertices.remove(sweepLineVertex);
+                continue;
             }
             if(this.isEndVertex(sweepLineVertex, polygon)){
                 List<HalfEdge> allIntersectEdges = this.findAllIntersectingEdges(sweepLineVertex, polygon);
@@ -313,7 +356,8 @@ public class HalfEdgeManagerImpl {
                     // insert diagonal
                 }
                 
-                currTree.remove(prevEdgeWithHelper);
+                sortedVertices.remove(sweepLineVertex);
+                continue;
             }
             if(this.isSplitVertex(sweepLineVertex, polygon)){
                 List<HalfEdge> allIntersectEdges = this.findAllIntersectingEdges(sweepLineVertex, polygon);
@@ -325,13 +369,15 @@ public class HalfEdgeManagerImpl {
                 
                 // insert diagonal
                 
-                edgeLeftToVertex.setHelper(sweepLineVertex);
+                /*edgeLeftToVertex.setHelper(sweepLineVertex);
                 HEVertex startVertex = sweepLineVertex;
                 HEVertex endVertex = this.nextHEVertex(startVertex, polygon);
                 EdgeWithHelper newEdge = new EdgeWithHelper(startVertex.getId(), 
                                                             startVertex, 
-                                                            endVertex);
-                currTree.add(newEdge);
+                                                            endVertex);*/
+                sortedVertices.remove(sweepLineVertex);
+                //currTree.add(newEdge);
+                continue;
             }
             if(this.isMergeVertex(sweepLineVertex, polygon)){
                 List<HalfEdge> allIntersectEdges = this.findAllIntersectingEdges(sweepLineVertex, polygon);
@@ -359,6 +405,8 @@ public class HalfEdgeManagerImpl {
                 }
                 
                 edgeLeftToVertex.setHelper(sweepLineVertex);
+                sortedVertices.remove(sweepLineVertex);
+                continue;
             }
             if(this.isRegularVertex(sweepLineVertex, polygon)){
                 List<HalfEdge> allIntersectEdges = this.findAllIntersectingEdges(sweepLineVertex, polygon);
@@ -370,10 +418,9 @@ public class HalfEdgeManagerImpl {
                                                                      allIntersectEdges, 
                                                                      polygon);
 
-                EdgeWithHelper prevEdgeWithHelper = this.findEdgeInTreeByID(prevHalfEdge, currTree);
-                HEVertex helper = prevEdgeWithHelper.getHelper();
-                
                 if(this.isInteriorToRightOfVertex(sweepLineVertex, polygon)){
+                    EdgeWithHelper prevEdgeWithHelper = this.findEdgeInTreeByID(prevHalfEdge, currTree);
+                    HEVertex helper = prevEdgeWithHelper.getHelper();
                     
                     if(this.isMergeVertex(helper, polygon)){
                         // insert diagonal
@@ -387,13 +434,14 @@ public class HalfEdgeManagerImpl {
                     newEdge.setHelper(helper);
                 }else{
                     EdgeWithHelper edgeLeftToVertex = this.findEdgeLeftToVertex(sweepLineVertex, currTree);
-                    helper = edgeLeftToVertex.getHelper();
+                    HEVertex helper = edgeLeftToVertex.getHelper();
                 
                     if(this.isMergeVertex(helper, polygon)){
                         // insert diagonal
                     }
                     edgeLeftToVertex.setHelper(helper);
                 }
+                sortedVertices.remove(sweepLineVertex);
             }
             
         }
@@ -422,7 +470,7 @@ public class HalfEdgeManagerImpl {
         Point2f testPoint = testVertex.getVertex();
         
         return this.isInteriorAngleLessThanPI(testPoint, prevPoint, nextPoint) &&
-               !this.isBothNeighborsBelowVertex(testPoint, prevPoint, nextPoint);
+               this.isBothNeighborsAboveVertex(testPoint, prevPoint, nextPoint);
     }
     
     private boolean isSplitVertex(HEVertex testVertex, HalfEdgeStructure polygon){
@@ -446,7 +494,7 @@ public class HalfEdgeManagerImpl {
         Point2f testPoint = testVertex.getVertex();
         
         return !this.isInteriorAngleLessThanPI(testPoint, prevPoint, nextPoint) &&
-               !this.isBothNeighborsBelowVertex(testPoint, prevPoint, nextPoint);
+               this.isBothNeighborsAboveVertex(testPoint, prevPoint, nextPoint);
     }
     
     private boolean isRegularVertex(HEVertex testVertex, HalfEdgeStructure polygon){
@@ -457,7 +505,7 @@ public class HalfEdgeManagerImpl {
         Point2f nextPoint = nextVertex.getVertex();
         Point2f testPoint = testVertex.getVertex();
         
-        return this.isVertexABelowVertexB(testPoint, prevPoint) != 
+        return this.isVertexABelowVertexB(testPoint, prevPoint) == 
                this.isVertexABelowVertexB(nextPoint, testPoint);
     }
     
@@ -480,24 +528,28 @@ public class HalfEdgeManagerImpl {
         float nextVectorX = nextPoint.x - testPoint.x;
         float nextVectorY = nextPoint.y - testPoint.y;
         
-        float ret = (prevVectorX * nextVectorX) - (prevVectorY * nextVectorY); // vzpocitame cross product pre 2D vector
+        float ret = (prevVectorX * nextVectorY) - (prevVectorY * nextVectorX); // vzpocitame cross product pre 2D vector
         
-        return ret < 0; 
+        return ret > 0; 
     }
     
     private boolean isBothNeighborsBelowVertex(Point2f testPoint, Point2f prevPoint, Point2f nextPoint){
-        return testPoint.y > prevPoint.y && testPoint.y > nextPoint.y;
+        //return testPoint.y > prevPoint.y && testPoint.y > nextPoint.y;
+        return this.isVertexABelowVertexB(prevPoint, testPoint) &&
+               this.isVertexABelowVertexB(nextPoint, testPoint);
+    }
+    
+    private boolean isBothNeighborsAboveVertex(Point2f testPoint, Point2f prevPoint, Point2f nextPoint){
+        //return testPoint.y < prevPoint.y && testPoint.y < nextPoint.y;
+        return this.isVertexABelowVertexB(testPoint, prevPoint) &&
+               this.isVertexABelowVertexB(testPoint, nextPoint);
     }
     
     private boolean isVertexABelowVertexB(Point2f pointA, Point2f pointB){
         if(pointA.y < pointB.y){
             return true;
-        }else{
-            if(pointA.x < pointB.x){
-                return true;
-            }
         }
-        return false;
+        return pointA.y == pointB.y && pointA.x > pointB.x;
     }
     
     private HEVertex nextHEVertex(HEVertex vertex, HalfEdgeStructure polygon){
@@ -516,7 +568,7 @@ public class HalfEdgeManagerImpl {
         HalfEdge currHalfEdge = polygon.getHalfEdge(leavingHalfEdge.getPrev());
         HalfEdge prevHalfEdge = polygon.getHalfEdge(currHalfEdge.getPrev());
         
-        long prevHEVertexID = currHalfEdge.getTargetVertex();
+        long prevHEVertexID = prevHalfEdge.getTargetVertex();
         
         return polygon.getHEVertex(prevHEVertexID);
     }
@@ -574,7 +626,7 @@ public class HalfEdgeManagerImpl {
         SortedSet<EdgeWithHelper> newTree = new TreeSet<>(new EdgeWithHelperComparator());
         
         for(EdgeWithHelper edge : edgesWithHelper){
-            SortedSet<HEVertex> subset = allSortedVertices.subSet(sweepLineVertex, edge.getStartEdgePoint());
+            SortedSet<HEVertex> subset = allSortedVertices.subSet(edge.getStartEdgePoint(), sweepLineVertex); // poradie v strome je stupajuce
             subset.remove(sweepLineVertex);
             HEVertex helper = new HEVertex(-1, null, -1);
             
@@ -621,9 +673,7 @@ public class HalfEdgeManagerImpl {
             Point2f endPoint = endVertex.getVertex();
             Point2f startPoint = startVertex.getVertex();
             
-            if(startPoint.y > testPoint.y == endPoint.y > testPoint.y){
-                break; // testovana usecka nelezi v rozmedzi y
-            }else{
+            if(startPoint.y > testPoint.y != endPoint.y > testPoint.y){ // testovana usecka lezi v rozmedzi y
                 Point2f intersectPoint = this.findEdgeAndLineOfVertexIntersection(testPoint, startPoint, endPoint);
                 if(intersectPoint.x > leftBoarder && intersectPoint.x < rightBoarder){
                     return false;
@@ -677,8 +727,12 @@ public class HalfEdgeManagerImpl {
             long targetVertexID = currHalfEdge.getTargetVertex();
             HEVertex targetVertex = polygon.getHEVertex(targetVertexID);
             Point2f targetPoint = targetVertex.getVertex();
+            HEVertex startVertex = this.prevHEVertex(targetVertex, polygon);
+            Point2f startPoint = startVertex.getVertex();
             
-            if(targetPoint.y < sweepLinePoint.y || sweepLineVertex.equals(targetVertex)){ // Merge a Regular
+            if(targetPoint.y < sweepLinePoint.y || 
+              (sweepLineVertex.equals(targetVertex) && startPoint.y >= sweepLinePoint.y)) // Merge a Regular
+            { 
                 edgesLeftToPolygon.add(currHalfEdge);
             }
         }
@@ -733,5 +787,60 @@ public class HalfEdgeManagerImpl {
     
     private boolean isIntersecting(Point2f testPoint, Point2f startPoint, Point2f endPoint){
         return startPoint.y > testPoint.y != endPoint.y > testPoint.y;
+    }
+    
+    public List<HEVertex> findOutherRing(HalfEdgeStructure polygon){
+        List<HEVertex> outherVertices = new ArrayList<>();
+        long firstHalfEdgeID = this.getFirstHalfEdge(polygon);
+        HalfEdge firstHalfEdge = polygon.getHalfEdge(firstHalfEdgeID);
+        HalfEdge currHalfEdge = firstHalfEdge;
+        HalfEdge nextHalfEdge = polygon.getHalfEdge(currHalfEdge.getNext());
+        
+        do{
+            HEVertex currVertex = polygon.getHEVertex(currHalfEdge.getTargetVertex());
+            HEVertex nextVertex = polygon.getHEVertex(nextHalfEdge.getTargetVertex());
+            
+            outherVertices.add(currVertex);
+            
+            currHalfEdge = nextHalfEdge;
+            nextHalfEdge = polygon.getHalfEdge(currHalfEdge.getNext());
+        }while(currHalfEdge != firstHalfEdge);
+        
+        return outherVertices;
+    }
+    
+    public List<List<HEVertex>> findAllHolesRings(HalfEdgeStructure polygon){
+        List<List<HEVertex>> allHoles = new ArrayList<>();
+        List<HEFace> faces = new ArrayList<>(polygon.getFaces());
+        HEFace face = faces.get(0);
+        
+        List<Long> holesHalfEdges = new ArrayList<>(face.getHoleHalfEdges());
+        
+        for(long currHalfEdgeID : holesHalfEdges){
+            List<HEVertex> currHole = this.findRingContainHalfEdge(currHalfEdgeID, polygon);
+            allHoles.add(currHole);
+        }
+        
+        return allHoles;
+    }
+    
+    private List<HEVertex> findRingContainHalfEdge(long firstHalfEdgeID, HalfEdgeStructure polygon){
+        List<HEVertex> ringOfVertices = new ArrayList<>();
+        HalfEdge firstHalfEdge = polygon.getHalfEdge(firstHalfEdgeID);
+        HalfEdge currHalfEdge = firstHalfEdge;
+        HalfEdge nextHalfEdge = polygon.getHalfEdge(currHalfEdge.getNext());
+        
+        do{
+            HEVertex currVertex = polygon.getHEVertex(currHalfEdge.getTargetVertex());
+            //HEVertex nextVertex = polygon.getHEVertex(nextHalfEdge.getTargetVertex());
+            
+            ringOfVertices.add(currVertex);
+            
+            currHalfEdge = polygon.getHalfEdge(currHalfEdge.getNext());
+            //currHalfEdge = nextHalfEdge;
+            //nextHalfEdge = polygon.getHalfEdge(currHalfEdge.getNext());
+        }while(currHalfEdge != firstHalfEdge);
+        
+        return ringOfVertices;
     }
 }

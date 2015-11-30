@@ -172,9 +172,11 @@ public class GeneralPlane {
         normalVec.normalize();
         Vector3d perpendicVec1 = this.getPerpendicularVector(normalVec);
         perpendicVec1.normalize();
+        //perpendicVec1.negate();
         Vector3d perpendicVec2 = new Vector3d(0, 0, 0);
         perpendicVec2.cross(normalVec, perpendicVec1);
         perpendicVec2.normalize();
+        perpendicVec2.negate();
         
         Matrix3d transformMatrix = new Matrix3d(perpendicVec1.x, perpendicVec2.x, normalVec.x,
                                                 perpendicVec1.y, perpendicVec2.y, normalVec.y,

@@ -179,4 +179,32 @@ public class ModelManagerImpl implements ModelManager {
         
     }
     */
+    
+    public long findMaxVertexID(Model model){
+        Map<Long, MVertex> verticesMap = model.getVertices();
+        long maxID = -1;
+        
+        for(long currVertexID : verticesMap.keySet()){
+            
+            if(maxID < currVertexID){
+                maxID = currVertexID;
+            }
+        }
+        
+        return maxID;
+    }
+    
+    public long findMaxTriangleID(Model model){
+        Map<Long, MTriangle> triangleMap = model.getTriangleMesh();
+        long maxID = -1;
+        
+        for(long currTriangleID : triangleMap.keySet()){
+            
+            if(maxID < currTriangleID){
+                maxID = currTriangleID;
+            }
+        }
+        
+        return maxID;
+    }
 }

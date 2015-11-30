@@ -286,8 +286,8 @@ public class Renderer  implements GLEventListener {
                     this.prevNormMouseY = currNormMouseY;
                 }else
                 {
-                    Vector2d newVector = new Vector2d(currNormMouseX, -currNormMouseY);
-                    Quaternion quatCurrent = this.rotate(new Vector2d(this.prevNormMouseX, -this.prevNormMouseY), newVector, /*this.getMouseZoom()*/1);
+                    Vector2d newVector = new Vector2d(currNormMouseX, /*-*/currNormMouseY);
+                    Quaternion quatCurrent = this.rotate(new Vector2d(this.prevNormMouseX, /*-*/this.prevNormMouseY), newVector, /*this.getMouseZoom()*/1);
 
                     quatFinal = quatCurrent.mult(quatAllRot);
                     quatAllRot = quatFinal;
