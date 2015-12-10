@@ -75,7 +75,8 @@ public class ModelManagerImpl implements ModelManager {
            
         System.out.println("Trojuholniky = " + triangleMap.keySet().size());
         System.out.println("Vrcholy = " + verticesMap.keySet().size());
-        return this.updateAdjacentTriangles(new Model(verticesMap, triangleMap));
+        String nameOfModel = this.modelName(path);
+        return this.updateAdjacentTriangles(new Model(nameOfModel, true, verticesMap, triangleMap));
     }
     
     public Model updateAdjacentTriangles(Model model){
@@ -206,5 +207,11 @@ public class ModelManagerImpl implements ModelManager {
         }
         
         return maxID;
+    }
+    
+    private String modelName(File path){
+        String nameOfModel = path.getName();
+        
+        return nameOfModel.replaceFirst("[.][^.]+$", "");
     }
 }

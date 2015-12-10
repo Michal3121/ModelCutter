@@ -5,13 +5,16 @@
  */
 package modelcutter;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import javax.vecmath.Point2f;
 import javax.vecmath.Point3f;
@@ -331,7 +334,7 @@ public class Aplication {
                         adjacentTrianglesTemp.add(vertex1aux.iterator().next()); //pridame prilahly trojuholnik
                     }
                 }else{
-                    System.out.println("Chyba //////////////////// ");
+                    System.out.println("Chyba //////////////////// " + vertex1.toString());
                 }
             }
             currentTriangle.setAdjacentTriangles(adjacentTrianglesTemp);
@@ -420,7 +423,7 @@ public class Aplication {
     {
         Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
         
-        int counter = 1;
+        int counter = 0;
         for(long triangleID : triangleMesh.keySet()){
             MTriangle currentTriangle = triangleMesh.get(triangleID);
             if(currentTriangle.getObjectID() == 0){
@@ -428,7 +431,7 @@ public class Aplication {
                 this.doIterativeDFS(model, triangleID, counter);
             }
         }
-        System.out.println("Number of parts: " + (counter - 1));
+        System.out.println("Number of parts: " + (counter));
         
         return counter;
         
@@ -698,7 +701,8 @@ public class Aplication {
         ModelManagerImpl modelmanager = new ModelManagerImpl();
         Model updatedModel = modelmanager.updateAdjacentTriangles(cutModel);
         
-        this.setComponent(cutModel);
+        int numberOfComponents = this.setComponent(cutModel);
+        listOfModels.addAll(this.separateModel(cutModel, numberOfComponents));
         return listOfModels;
     }
     
@@ -901,6 +905,72 @@ public class Aplication {
             triangleID++;
         }
         return cutModel;
+    }
+    
+    private List<Model> separateModel(Model model, int numberOfComponents){
+        Map<Long, MTriangle> triangleMesh = model.getTriangleMesh();
+        Map<Long, MVertex> triangleVertices = model.getVertices(); 
+        Iterator<Long> trianglesIter = triangleMesh.keySet().iterator();
+        List<Model> listOfmodels = new ArrayList<>();
+        List<Color> listOfColors = this.addColors();
+        
+        for(int i = 1; i <= numberOfComponents; i++){
+            Map<Long, MTriangle> newTriangleMesh = new HashMap<>();
+            Map<Long, MVertex> newTriangleVertices = new HashMap<>();
+            
+            //while(trianglesIter.hasNext()){
+            for(long triangleID : triangleMesh.keySet()){
+                //long triangleID = trianglesIter.next();
+                MTriangle currTriangle = triangleMesh.get(triangleID);
+                
+                if(currTriangle.getObjectID() == i){
+                    currTriangle.setObjectID(0);
+                    newTriangleMesh.put(triangleID, currTriangle);
+                    long[] verticesIDs = currTriangle.getTriangleVertices();
+
+                    for(int k = 0; k < 3; k++){
+                        long currVertexID = verticesIDs[k];
+                        MVertex vertex = triangleVertices.get(currVertexID);
+                        newTriangleVertices.put(currVertexID, vertex);
+                        //triangleVertices.remove(currVertexID);
+                    }
+                    //trianglesIter.remove();
+                }
+            }
+            
+            String newName = model.getModelName() + "_" + i;
+            Model newModel = new Model(newName, true, newTriangleVertices, newTriangleMesh);
+            
+            if(!listOfColors.isEmpty()){
+                Random random = new Random();
+                int randomIndex = random.nextInt(listOfColors.size());
+                newModel.setColor(listOfColors.get(randomIndex));
+                listOfColors.remove(randomIndex);
+            }else{
+                listOfColors = this.addColors();
+                Random random = new Random();
+                int randomIndex = random.nextInt(listOfColors.size());
+                newModel.setColor(listOfColors.get(randomIndex));
+                listOfColors.remove(randomIndex);
+            }
+            
+            listOfmodels.add(newModel);
+        }
+        
+        return listOfmodels;
+    }
+    
+    private List<Color> addColors(){
+        List<Color> colors = new ArrayList<>();
+        
+        colors.add(new Color(255,153,153)); //red
+        colors.add(new Color(255, 204,153)); //orange
+        colors.add(new Color(255,255,153)); // yellow
+        colors.add(new Color(204,255,153)); // green
+        colors.add(new Color(153,153,255)); // blue
+        colors.add(new Color(255,153,204)); // pink
+        
+        return colors;
     }
     
     private boolean IsPointInPolygon(Point3f point, List<Long> polygon, Model model)

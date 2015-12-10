@@ -5,9 +5,11 @@
  */
 package modelcutter;
 
+import java.awt.Color;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import javax.vecmath.Point3f;
 
 /**
@@ -16,6 +18,9 @@ import javax.vecmath.Point3f;
  */
 public class Model {
     
+    private String modelName;
+    private Color color;
+    private boolean visible;
     private Map<Long, MVertex> vertices = new HashMap<>();
     private Map<Long, MTriangle> triangleMesh = new HashMap<>();
     private double sizeXmax;
@@ -26,6 +31,14 @@ public class Model {
     private double sizeZmin;
     
     public Model(Map<Long, MVertex> vertices, Map<Long, MTriangle> triangles){
+        this.vertices = vertices;
+        this.triangleMesh = triangles;
+        this.initMeasurements();
+    }
+    
+    public Model(String name, boolean visible, Map<Long, MVertex> vertices, Map<Long, MTriangle> triangles){
+        this.modelName = name;
+        this.visible = visible;
         this.vertices = vertices;
         this.triangleMesh = triangles;
         this.initMeasurements();
@@ -87,6 +100,30 @@ public class Model {
         
         this.triangleMesh.remove(triangleToDeleteID);
     }
+
+    public String getModelName() {
+        return modelName;
+    }
+
+    public void setModelName(String modelName) {
+        this.modelName = modelName;
+    }
+
+    public Color getColor() {
+        return color;
+    }
+
+    public void setColor(Color color) {
+        this.color = color;
+    }
+
+    public boolean isVisible() {
+        return visible;
+    }
+
+    public void setVisible(boolean visible) {
+        this.visible = visible;
+    }
     
     public double getSizeX(){
         return this.sizeXmax - this.sizeXmin;
@@ -112,6 +149,36 @@ public class Model {
 
     public Map<Long, MTriangle> getTriangleMesh() {
         return triangleMesh;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 67 * hash + Objects.hashCode(this.modelName);
+        hash = 67 * hash + Objects.hashCode(this.vertices);
+        hash = 67 * hash + Objects.hashCode(this.triangleMesh);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Model other = (Model) obj;
+        if (!Objects.equals(this.modelName, other.modelName)) {
+            return false;
+        }
+        if (!Objects.equals(this.vertices, other.vertices)) {
+            return false;
+        }
+        if (!Objects.equals(this.triangleMesh, other.triangleMesh)) {
+            return false;
+        }
+        return true;
     }
     
 }

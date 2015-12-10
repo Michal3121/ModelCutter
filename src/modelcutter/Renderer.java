@@ -7,6 +7,7 @@ package modelcutter;
 
 import com.jogamp.opengl.math.Quaternion;
 import com.jogamp.opengl.util.gl2.GLUT;
+import java.awt.Color;
 import static java.lang.Math.abs;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,6 +46,7 @@ public class Renderer  implements GLEventListener {
     
     private GLU glu;
     private GLUT glut = new GLUT();
+    private Model selectedModel;
     private double mouseZoom = 2;
     private boolean middleMouseButtonPressed = false;
     private boolean leftMouseButtonPressed = false;
@@ -138,14 +140,32 @@ public class Renderer  implements GLEventListener {
     public void setPlane(Plane plane) {
         this.plane = plane;
     }
-    
-    public Renderer(int panelWidth, int panelHeight){ //Musi byt bezparametricky kostruktor, inak sa nic nevykresli po zapnuti
-        this.panelWidth = panelWidth;
-        this.panelHeight = panelHeight;
+
+    public Model getSelectedModel() {
+        return selectedModel;
+    }
+
+    public void setSelectedModel(Model selectedModel) {
+        this.selectedModel = selectedModel;
+    }
+
+    public Quaternion getQuatFinal() {
+        return quatFinal;
+    }
+
+    public void setQuatFinal(Quaternion quatFinal) {
+        this.quatFinal = quatFinal;
+    }
+
+    public Quaternion getQuatAllRot() {
+        return quatAllRot;
+    }
+
+    public void setQuatAllRot(Quaternion quatAllRot) {
+        this.quatAllRot = quatAllRot;
     }
     
-    public Renderer(Model model, int panelWidth, int panelHeight){
-        this.model = model;
+    public Renderer(int panelWidth, int panelHeight){ //Musi byt bezparametricky kostruktor, inak sa nic nevykresli po zapnuti
         this.panelWidth = panelWidth;
         this.panelHeight = panelHeight;
     }
@@ -205,10 +225,10 @@ public class Renderer  implements GLEventListener {
         gl.glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
         gl.glShadeModel(GL_SMOOTH);
         
-        gl.glNewList(1,GL_COMPILE);
-        
         if(this.model != null)
         {
+            gl.glNewList(1,GL_COMPILE);
+            
             double translatedX = model.getModelCenter().x;
             double translatedY = model.getModelCenter().y;
             double translatedZ = model.getModelCenter().z;
@@ -216,39 +236,31 @@ public class Renderer  implements GLEventListener {
             gl.glTranslated(- translatedX, - translatedY,  - translatedZ);
             this.drawModel(model, gl);
             this.drawSquarePlane(this.getPlane(), 100, gl);
+            
+            gl.glEndList();
         }
         
         if(this.listOfModels != null && !listOfModels.isEmpty()) // POZOR vyhodnocovanie zlava
         {
-            for(int i=0; i< listOfModels.size(); i++){
-                double translatedX = listOfModels.get(i).getModelCenter().x;
-                double translatedY = listOfModels.get(i).getModelCenter().y;
-                double translatedZ = listOfModels.get(i).getModelCenter().z;
+            Point3f centerOfModels = this.findCenterOfModels(listOfModels);
+            
+            for(int i = 0; i < listOfModels.size(); i++){
+                gl.glNewList(i + 1,GL_COMPILE);
                 
-                gl.glBegin(GL.GL_POINTS);
-                gl.glPointSize( 2.0f );
-                gl.glColor3f(0,0,1);
-                gl.glVertex3d(2, 2, 1);
-                gl.glEnd();
-                
-                gl.glTranslated(- translatedX, - translatedY,  - translatedZ);
-                
-                gl.glBegin(GL.GL_POINTS);
-                gl.glPointSize( 2.0f );
-                gl.glColor3f(0,0,1);
-                gl.glVertex3d(translatedX+2, translatedY+2, translatedZ + 1);
-                gl.glEnd();
-                
+                gl.glPushMatrix();
+                gl.glTranslated(- centerOfModels.x, - centerOfModels.y,  - centerOfModels.z);          
                 drawModel(listOfModels.get(i), gl);
+                gl.glPopMatrix();
+                
+                gl.glEndList();
             }
-            this.drawSquarePlane(this.getPlane(), 100, gl);      
+            //this.drawSquarePlane(this.getPlane(), 100, gl);      
         }
-        gl.glEndList();
         
-        gl.glNewList(2, GL_COMPILE);
+        /*gl.glNewList(0, GL_COMPILE);
         drawFloor(50,gl);
-        gl.glEndList();
-           
+        gl.glEndList();*/
+        
     }
 
     @Override
@@ -313,10 +325,27 @@ public class Renderer  implements GLEventListener {
         this.drawAxes(gl); // otacanie spolu s objektom
         
         // vykreslenie aktualneho modelu
-        gl.glPushMatrix();
-        gl.glCallList(1); 
-        gl.glPopMatrix();
-        
+        if(this.listOfModels != null && !listOfModels.isEmpty()){
+            // vykreslenie objektov osobitne
+            for(int i = 1; i <= listOfModels.size(); i++){
+                Model currModel = listOfModels.get(i - 1);
+                Color modelColor = currModel.getColor();
+                
+                if(currModel.equals(this.selectedModel)){ // vykreslenie oznaceneho
+                    gl.glColor3ub((byte)modelColor.getRed(), (byte)modelColor.getGreen(), (byte)modelColor.getBlue());
+                    Color reducedSatur = this.increaseSaturation(modelColor, 0.6f);
+                    gl.glColor3ub((byte) reducedSatur.getRed(), (byte) reducedSatur.getGreen(), (byte) reducedSatur.getBlue());
+                    if(gl.glIsList(i)){
+                        gl.glCallList(i);
+                    }
+                }else{
+                    gl.glColor3ub((byte)modelColor.getRed(), (byte)modelColor.getGreen(), (byte)modelColor.getBlue());
+                    if(gl.glIsList(i)){
+                        gl.glCallList(i);
+                    }
+                }
+            }
+        }
         //this.drawRing(gl);
         
         gl.glColor3f(1.0f, 1.0f, 1.0f);
@@ -362,7 +391,7 @@ public class Renderer  implements GLEventListener {
         gl.glColor3f(0, 0, 1);
         gl.glVertex2f(1, -1);
         gl.glEnd();
-          
+        
         
         /*
          gl.glBegin(GL.GL_TRIANGLES); // draw using triangles
@@ -421,7 +450,6 @@ public class Renderer  implements GLEventListener {
         
         for(long key : triangles.keySet())
         {
-            //System.out.println("kreslim z mapy");
             MTriangle currentTriangle = triangles.get(key);
             long[] verticesKeys =  currentTriangle.getTriangleVertices();
             
@@ -429,35 +457,6 @@ public class Renderer  implements GLEventListener {
             Point3f vertex0 = vertices.get(verticesKeys[0]).getVertex();
             Point3f vertex1 = vertices.get(verticesKeys[1]).getVertex();
             Point3f vertex2 = vertices.get(verticesKeys[2]).getVertex();
-            
-            if(currentTriangle.isIntersecting())
-            {
-                gl.glColor3f(1, 0, 0);
-            }
-            else if(currentTriangle.getObjectID() == 1)
-            {
-                gl.glColor3f(0, 1, 0);
-            }
-            else if(currentTriangle.getObjectID() == 2)
-            {
-                gl.glColor3f(0, 0, 1);
-            }
-            else if(currentTriangle.getObjectID() == 3)
-            {
-                gl.glColor3f(1, 1, 0);
-            }
-            else if(currentTriangle.getObjectID() == 4)
-            {
-                gl.glColor3f(1, 0, 1);
-            }
-            else if(currentTriangle.getObjectID() == 5)
-            {
-                gl.glColor3f(0, 1, 1);
-            }
-            else
-            {
-                gl.glColor3f(0, 1, 0);
-            }
             
             gl.glBegin(GL_TRIANGLES);
             gl.glNormal3f(normal.x, normal.y, normal.z);
@@ -541,5 +540,29 @@ public class Renderer  implements GLEventListener {
                 gl.glEnd();     
             }
         }   
-    } 
+    }
+    
+    private Point3f findCenterOfModels(List<Model> allModels){
+        float sizeXmax = 0;
+        float sizeYmax = 0;
+        float sizeZmax = 0;
+        
+        for(Model currModel : allModels){
+            sizeXmax += (float) currModel.getModelCenter().x;
+            sizeYmax += (float) currModel.getModelCenter().y;
+            sizeZmax += (float) currModel.getModelCenter().z;
+        }
+        
+        return new Point3f(sizeXmax / allModels.size(), sizeYmax / allModels.size(), sizeZmax / allModels.size());
+    }
+    
+    private Color increaseSaturation(Color currColor, float magnitudeOfChange){
+        float[] hsbcolor = new float[3];
+        
+        Color.RGBtoHSB(currColor.getRed(), currColor.getGreen(), currColor.getBlue(), hsbcolor);
+        hsbcolor[1] = hsbcolor[1] + magnitudeOfChange;
+        int newColorInt = Color.HSBtoRGB(hsbcolor[0], hsbcolor[1], hsbcolor[2]);
+        
+        return new Color(newColorInt); 
+    }
 }

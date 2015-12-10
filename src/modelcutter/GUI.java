@@ -5,9 +5,11 @@
  */
 package modelcutter;
 
+import com.jogamp.opengl.math.Quaternion;
 import com.jogamp.opengl.util.FPSAnimator;
 import com.vividsolutions.jts.geom.Coordinate;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -21,25 +23,40 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.GLProfile;
 import javax.media.opengl.awt.GLCanvas;
 import javax.media.opengl.awt.GLJPanel;
 import javax.swing.JFileChooser;
+import javax.swing.JLabel;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.ToolTipManager;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableCellRenderer;
 import javax.vecmath.Point3f;
+import modelcutter.gui.ColorCellRenderer;
+import modelcutter.gui.Models3dTableModel;
 
 /**
  *
@@ -58,7 +75,12 @@ public class GUI extends javax.swing.JFrame {
     private List<Model> models;
     private Model newModel;
     private Point3f planeCenter;
+    private Models3dTableModel tableModel;
    
+    public void setSelectedModelInRenderer(Model selectedModel){
+        this.renderer.setSelectedModel(selectedModel);
+    }
+    
     /**
      * Creates new form MainGUI
      */ 
@@ -188,6 +210,48 @@ public class GUI extends javax.swing.JFrame {
         
     }
     
+    private class LoadModelSwingWorker extends SwingWorker<Model, Integer>{
+        private File path;
+        
+        private LoadModelSwingWorker(File path){
+            this.path = path;
+            statusLabel.setText("Loading model ...");
+        }
+        
+        @Override
+        protected Model doInBackground() throws Exception {
+            Model model = modelManager.loadModel(path);
+            return model;
+        }
+        
+        @Override
+        protected void done(){
+            try {
+                newModel = this.get();
+                models.add(newModel);
+            } catch (InterruptedException | ExecutionException ex) {
+                Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+            GUI.this.reloadRenderer(models);
+
+            float planeX = newModel.getModelCenter().x;
+            float planeY = newModel.getModelCenter().y;
+            float planeZ = newModel.getModelCenter().z;
+
+            planeCenter = new Point3f(planeX, planeY, planeZ);  
+            renderer.setPlane(new CircularPlane(planeCenter, new Point3f(0,1,0), 50));
+            statusLabel.setText(" ");
+            GUI.this.refreshInformationPanel(newModel);
+            
+            newModel.setColor(new Color(204, 255, 153));
+            //jTableModels.clearSelection();
+            jTableModels.getSelectionModel().clearSelection();
+            tableModel.removeAllModels3d();
+            tableModel.addModel3d(newModel);
+        }  
+    }
+    
     private void initMenu(){
         
         JPopupMenu.setDefaultLightWeightPopupEnabled(false);
@@ -214,6 +278,27 @@ public class GUI extends javax.swing.JFrame {
         //JPopupMenu.setDefaultLightWeightPopupEnabled(false);
         //ToolTipManager.sharedInstance().setLight WeightPopupEnabled(false);
         
+        tableModel = (Models3dTableModel) jTableModels.getModel();
+        
+        jTableModels.getSelectionModel().addListSelectionListener(
+            new ListSelectionListener() {
+                @Override
+                public void valueChanged(ListSelectionEvent e) {
+                    if(!e.getValueIsAdjusting()){
+                        int selectedRow = jTableModels.getSelectedRow();
+                        if(selectedRow > -1){ // ked sa to zavola a tabulka je prazdna
+                            Model selectedModel = tableModel.getModel3d(selectedRow);
+
+                            GUI.this.refreshInformationPanel(selectedModel);
+
+                            //if(selectedModel.isVisible()){
+                                renderer.setSelectedModel(selectedModel);
+                            //}
+                        }
+                    }
+                }
+        });
+        
         loadModel.addActionListener(new ActionListener(){
             
             @Override
@@ -232,18 +317,19 @@ public class GUI extends javax.swing.JFrame {
                
                 if(openValue == JFileChooser.APPROVE_OPTION){
                     models.clear();
-                    newModel = modelManager.loadModel(new File(openingChooser.getSelectedFile().getAbsolutePath()));
-                    renderer = new Renderer(newModel, openGlPanel.getWidth(), openGlPanel.getHeight());
-                    glCanvas.addGLEventListener(renderer);
-                    
-                    float planeX = newModel.getModelCenter().x;
-                    float planeY = newModel.getModelCenter().y;
-                    float planeZ = newModel.getModelCenter().z;
-                    
-                    planeCenter = new Point3f(planeX, planeY, planeZ);  
-                    renderer.setPlane(new CircularPlane(planeCenter, new Point3f(0,1,0), 50));
-                    GUI.this.initInformationPanel();
-                }     
+                    File file = new File(openingChooser.getSelectedFile().getAbsolutePath());
+                    if(GUI.this.isFileInStlAsciiFormat(file)){
+                        LoadModelSwingWorker loadSwingWorker = new LoadModelSwingWorker(file);
+                        try {
+                            loadSwingWorker.execute();
+                        } catch (Exception ex) {
+                            Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                        }else{
+                            String message = "Application does not support models in STL binary format.";
+                            JOptionPane.showMessageDialog(GUI.this, message, "Wrong format", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                }
             }  
         });
         
@@ -277,23 +363,84 @@ public class GUI extends javax.swing.JFrame {
         
     }
     
-    public void initInformationPanel(){
-        double width = this.newModel.getSizeX();
-        this.widthValueLabel.setText(Double.toString(width));
-        
-        double height = this.newModel.getSizeY();
-        this.heightValueLabel.setText(Double.toString(height));
-        
-        double length = this.newModel.getSizeZ();
-        this.lengthValueLabel.setText(Double.toString(length));
-        
-        long pointsCount = this.newModel.getVertices().size();
-        this.pointsCountLabel.setText(Long.toString(pointsCount));
-        
-        long triangleCount = this.newModel.getTriangleMesh().size();
-        this.trianglesCountLabel.setText(Long.toString(triangleCount));
+    public void rendererRepaint(){
+        List<Model> listOfModels = this.findModelsToRender(tableModel.getAllmodels3d());
+        this.reloadRenderer(listOfModels);
     }
     
+    private List<Model> findModelsToRender(List<Model> allModels){
+        List<Model> modelsToRender = new ArrayList<>();
+        
+        for(Model currModel : allModels){
+            if(currModel.isVisible()){
+                modelsToRender.add(currModel);
+            }
+        }
+        
+        return modelsToRender;
+    } 
+    
+    public boolean isFileInStlAsciiFormat(File file){
+        try(Reader reader = new FileReader(file)){
+            BufferedReader br = new BufferedReader(reader);
+            char[] first5Char = new char[5];
+            
+            br.read(first5Char, 0, 5);
+            String solid = String.valueOf(first5Char);
+            String lowerSolid = solid.toLowerCase();
+            
+            return lowerSolid.equals("solid");
+        }catch(IOException ex){
+            System.out.println("Chyba/////////");
+        }
+        return false;
+    }
+    
+    private void reloadRenderer(List<Model> listOfModels){
+        double mouseZoom = renderer.getMouseZoom();
+        Quaternion allRot = renderer.getQuatAllRot();
+        Quaternion currQuat = renderer.getQuatFinal();
+        
+        glCanvas.removeGLEventListener(renderer);
+        renderer = new Renderer(listOfModels, openGlPanel.getWidth(), openGlPanel.getHeight());
+        renderer.setMouseZoom(mouseZoom);
+        renderer.setQuatFinal(currQuat);
+        renderer.setQuatAllRot(allRot);
+        glCanvas.addGLEventListener(renderer);
+    }
+    
+    public void refreshInformationPanel(Model model){
+        this.modelNameLabel.setText(model.getModelName());
+        
+        double width = model.getSizeX();
+        this.widthValueLabel.setText(String.format("%,.3f", width));
+        
+        double height = model.getSizeY();
+        this.heightValueLabel.setText(String.format("%,.3f", height));
+        
+        double length = model.getSizeZ();
+        this.lengthValueLabel.setText(String.format("%,.3f", length));
+        
+        long pointsCount = model.getVertices().size();
+        this.pointsCountLabel.setText(String.format("%,d", pointsCount));
+        
+        long triangleCount = model.getTriangleMesh().size();
+        this.trianglesCountLabel.setText(String.format("%,d", triangleCount));
+    }
+    
+    private void clearInformationPanel(){
+        this.modelNameLabel.setText(" ");
+        
+        this.widthValueLabel.setText(" ");
+        
+        this.heightValueLabel.setText(" ");
+        
+        this.lengthValueLabel.setText(" ");
+        
+        this.pointsCountLabel.setText(" ");
+        
+        this.trianglesCountLabel.setText(" ");
+    }
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -307,7 +454,7 @@ public class GUI extends javax.swing.JFrame {
         leftPanel = new javax.swing.JPanel();
         ListOfModelsPanel = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
-        jList1 = new javax.swing.JList();
+        jTableModels = new javax.swing.JTable();
         informationPanel = new javax.swing.JPanel();
         infoLeftPanel = new javax.swing.JPanel();
         widthLabel = new javax.swing.JLabel();
@@ -364,7 +511,6 @@ public class GUI extends javax.swing.JFrame {
         projection2DPanel = new javax.swing.JPanel();
         statusPanel = new javax.swing.JPanel();
         statusLabel = new javax.swing.JLabel();
-        progressBar = new javax.swing.JProgressBar();
         toolBar = new javax.swing.JToolBar();
         cutButton = new javax.swing.JButton();
         jMenuBar1 = new javax.swing.JMenuBar();
@@ -378,26 +524,40 @@ public class GUI extends javax.swing.JFrame {
 
         ListOfModelsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("List of 3D models"));
 
-        jList1.setModel(new javax.swing.AbstractListModel() {
-            String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
-            public int getSize() { return strings.length; }
-            public Object getElementAt(int i) { return strings[i]; }
+        jTableModels.setModel((new modelcutter.gui.Models3dTableModel(this)));
+        jTableModels.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        jTableModels.setDefaultRenderer(Color.class, new ColorCellRenderer());
+        TableCellRenderer headerRenderer = jTableModels.getTableHeader().getDefaultRenderer();
+        JLabel headerLabel = (JLabel) headerRenderer;
+        headerLabel.setHorizontalAlignment(JLabel.CENTER);
+
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        jTableModels.setDefaultRenderer(String.class, centerRenderer);
+
+        jTableModels.getColumnModel().getColumn(0).setMinWidth(15);
+        jTableModels.getColumnModel().getColumn(0).setMaxWidth(15);
+        jTableModels.getColumnModel().getColumn(0).setPreferredWidth(15);
+        jTableModels.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                jTableModelsMouseClicked(evt);
+            }
         });
-        jScrollPane1.setViewportView(jList1);
+        jScrollPane1.setViewportView(jTableModels);
 
         javax.swing.GroupLayout ListOfModelsPanelLayout = new javax.swing.GroupLayout(ListOfModelsPanel);
         ListOfModelsPanel.setLayout(ListOfModelsPanelLayout);
         ListOfModelsPanelLayout.setHorizontalGroup(
             ListOfModelsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, ListOfModelsPanelLayout.createSequentialGroup()
+            .addGroup(ListOfModelsPanelLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane1)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
                 .addContainerGap())
         );
         ListOfModelsPanelLayout.setVerticalGroup(
             ListOfModelsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(ListOfModelsPanelLayout.createSequentialGroup()
-                .addContainerGap()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, ListOfModelsPanelLayout.createSequentialGroup()
+                .addGap(17, 17, 17)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
                 .addContainerGap())
         );
@@ -410,11 +570,11 @@ public class GUI extends javax.swing.JFrame {
 
         lengthLabel.setText("Length:");
 
-        widthValueLabel.setText("jLabel1");
+        widthValueLabel.setText(" ");
 
-        heightValueLabel.setText("jLabel2");
+        heightValueLabel.setText(" ");
 
-        lengthValueLabel.setText("jLabel3");
+        lengthValueLabel.setText(" ");
 
         javax.swing.GroupLayout infoLeftPanelLayout = new javax.swing.GroupLayout(infoLeftPanel);
         infoLeftPanel.setLayout(infoLeftPanelLayout);
@@ -434,7 +594,7 @@ public class GUI extends javax.swing.JFrame {
                         .addGroup(infoLeftPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(heightValueLabel)
                             .addComponent(widthValueLabel))))
-                .addGap(0, 34, Short.MAX_VALUE))
+                .addGap(0, 0, Short.MAX_VALUE))
         );
         infoLeftPanelLayout.setVerticalGroup(
             infoLeftPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -456,9 +616,9 @@ public class GUI extends javax.swing.JFrame {
 
         pointLabel.setText("Points:");
 
-        pointsCountLabel.setText("jLabel4");
+        pointsCountLabel.setText(" ");
 
-        trianglesCountLabel.setText("jLabel5");
+        trianglesCountLabel.setText(" ");
 
         javax.swing.GroupLayout infoRightPanelLayout = new javax.swing.GroupLayout(infoRightPanel);
         infoRightPanel.setLayout(infoRightPanelLayout);
@@ -468,8 +628,8 @@ public class GUI extends javax.swing.JFrame {
                 .addGroup(infoRightPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(infoRightPanelLayout.createSequentialGroup()
                         .addComponent(trianglesLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 7, Short.MAX_VALUE)
-                        .addComponent(trianglesCountLabel))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(trianglesCountLabel, javax.swing.GroupLayout.DEFAULT_SIZE, 38, Short.MAX_VALUE))
                     .addGroup(infoRightPanelLayout.createSequentialGroup()
                         .addComponent(pointLabel)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -492,7 +652,7 @@ public class GUI extends javax.swing.JFrame {
 
         nameLabel.setText("Model name:");
 
-        modelNameLabel.setText("jLabel1");
+        modelNameLabel.setText(" ");
 
         javax.swing.GroupLayout informationPanelLayout = new javax.swing.GroupLayout(informationPanel);
         informationPanel.setLayout(informationPanelLayout);
@@ -502,19 +662,20 @@ public class GUI extends javax.swing.JFrame {
                 .addGap(6, 6, 6)
                 .addGroup(informationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(informationPanelLayout.createSequentialGroup()
+                        .addComponent(infoLeftPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(infoRightPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addContainerGap())
+                    .addGroup(informationPanelLayout.createSequentialGroup()
                         .addComponent(nameLabel)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(modelNameLabel))
-                    .addGroup(informationPanelLayout.createSequentialGroup()
-                        .addComponent(infoLeftPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(infoRightPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addComponent(modelNameLabel)
+                        .addGap(23, 23, 23))))
         );
         informationPanelLayout.setVerticalGroup(
             informationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, informationPanelLayout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap()
                 .addGroup(informationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(nameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 15, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(modelNameLabel))
@@ -546,7 +707,7 @@ public class GUI extends javax.swing.JFrame {
                     .addComponent(rectangleCheckBox)
                     .addComponent(sqareCheckBox)
                     .addComponent(circleCheckBox))
-                .addContainerGap(110, Short.MAX_VALUE))
+                .addContainerGap(117, Short.MAX_VALUE))
         );
         typeOfPlanePanelLayout.setVerticalGroup(
             typeOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -574,12 +735,10 @@ public class GUI extends javax.swing.JFrame {
         yPlanePositionLabel.setText("Y:");
         yPlanePositionLabel.setMaximumSize(new java.awt.Dimension(10, 20));
         yPlanePositionLabel.setMinimumSize(new java.awt.Dimension(10, 20));
-        yPlanePositionLabel.setPreferredSize(new java.awt.Dimension(10, 20));
 
         zPlanePositionLabel.setText("Z:");
         zPlanePositionLabel.setMaximumSize(new java.awt.Dimension(10, 20));
         zPlanePositionLabel.setMinimumSize(new java.awt.Dimension(10, 20));
-        zPlanePositionLabel.setPreferredSize(new java.awt.Dimension(10, 20));
 
         xPlanePositionSpinner.setMinimumSize(new java.awt.Dimension(45, 20));
         xPlanePositionSpinner.setPreferredSize(new java.awt.Dimension(45, 20));
@@ -591,7 +750,7 @@ public class GUI extends javax.swing.JFrame {
         positionOfPlanePanelLayout.setHorizontalGroup(
             positionOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(positionOfPlanePanelLayout.createSequentialGroup()
-                .addContainerGap(30, Short.MAX_VALUE)
+                .addContainerGap(37, Short.MAX_VALUE)
                 .addGroup(positionOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, positionOfPlanePanelLayout.createSequentialGroup()
                         .addComponent(xPlanePositionLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -734,7 +893,7 @@ public class GUI extends javax.swing.JFrame {
         sizeOfPlanePanelLayout.setHorizontalGroup(
             sizeOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(sizeOfPlanePanelLayout.createSequentialGroup()
-                .addContainerGap(30, Short.MAX_VALUE)
+                .addContainerGap(37, Short.MAX_VALUE)
                 .addGroup(sizeOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(xPlaneSizeLabel, javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(zPlaneSizeLabel, javax.swing.GroupLayout.Alignment.TRAILING)
@@ -812,11 +971,11 @@ public class GUI extends javax.swing.JFrame {
         openGlPanel.setLayout(openGlPanelLayout);
         openGlPanelLayout.setHorizontalGroup(
             openGlPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 574, Short.MAX_VALUE)
+            .addGap(0, 567, Short.MAX_VALUE)
         );
         openGlPanelLayout.setVerticalGroup(
             openGlPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 412, Short.MAX_VALUE)
+            .addGap(0, 448, Short.MAX_VALUE)
         );
 
         jTabbedPane1.addTab("3D scene", openGlPanel);
@@ -825,18 +984,18 @@ public class GUI extends javax.swing.JFrame {
         projection2DPanel.setLayout(projection2DPanelLayout);
         projection2DPanelLayout.setHorizontalGroup(
             projection2DPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 574, Short.MAX_VALUE)
+            .addGap(0, 567, Short.MAX_VALUE)
         );
         projection2DPanelLayout.setVerticalGroup(
             projection2DPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 412, Short.MAX_VALUE)
+            .addGap(0, 448, Short.MAX_VALUE)
         );
 
         jTabbedPane1.addTab("2D projection", projection2DPanel);
 
         statusPanel.setPreferredSize(new java.awt.Dimension(226, 16));
 
-        statusLabel.setText("Loading...");
+        statusLabel.setText(" ");
 
         javax.swing.GroupLayout statusPanelLayout = new javax.swing.GroupLayout(statusPanel);
         statusPanel.setLayout(statusPanelLayout);
@@ -844,18 +1003,14 @@ public class GUI extends javax.swing.JFrame {
             statusPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(statusPanelLayout.createSequentialGroup()
                 .addGap(5, 5, 5)
-                .addComponent(statusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 60, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(progressBar, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(statusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         statusPanelLayout.setVerticalGroup(
             statusPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(statusPanelLayout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(statusPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(statusLabel)
-                    .addComponent(progressBar, javax.swing.GroupLayout.PREFERRED_SIZE, 14, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addComponent(statusLabel)
                 .addContainerGap(22, Short.MAX_VALUE))
         );
 
@@ -889,7 +1044,7 @@ public class GUI extends javax.swing.JFrame {
                 .addGap(12, 12, 12)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jTabbedPane1)
-                    .addComponent(statusPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 579, Short.MAX_VALUE))
+                    .addComponent(statusPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 572, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(leftPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
@@ -924,16 +1079,21 @@ public class GUI extends javax.swing.JFrame {
         intersectionTriangles.addAll(app.getAllIntersectionTriangles(newModel, plane));
         app.divideIntersectingTriangles(intersectionTriangles, newModel, plane);
         //app.divideModel(modelWithMap, plane);
-        app.setComponent(newModel);
+        //app.setComponent(newModel);
         List<HalfEdgeStructure> allPolygons = app.findBoundaryPoplygonsFromCut(newModel, plane);
-        app.divideModel(newModel, allPolygons, plane);
+        List<Model> dividedModels = app.divideModel(newModel, allPolygons, plane);
+        tableModel.addModels3d(dividedModels);
         //app.findBoundaryPolygons(newModel, plane);
         //allParts = app.getListsOfParts(intersectionTriangles, modelWithMap);
         //app.getDividedTriangleFromRing(allParts, modelWithMap, plane);
-        models.add(newModel); // docasne riesenie, kym nemame rozne modely
-        renderer = new Renderer(models, openGlPanel.getWidth(), openGlPanel.getHeight());
+        //models.add(newModel); // docasne riesenie, kym nemame rozne modely
+        models.remove(newModel);
+        tableModel.removeModel3d(newModel);
+        jTableModels.getSelectionModel().clearSelection();
+        models.addAll(dividedModels);
         
-        glCanvas.addGLEventListener(renderer);
+        this.reloadRenderer(dividedModels);
+        this.clearInformationPanel();
         
         System.out.println("Center 2 Cube" + this.newModel.getModelCenter());
         System.out.println("Center Cube" + this.newModel.getModelCenter());
@@ -944,6 +1104,16 @@ public class GUI extends javax.swing.JFrame {
         //renderer.setRingList(ringList);
         renderer.setPlane(plane);
     }//GEN-LAST:event_cutButtonActionPerformed
+
+    private void jTableModelsMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTableModelsMouseClicked
+        int row = jTableModels.rowAtPoint(evt.getPoint());
+        int column = jTableModels.columnAtPoint(evt.getPoint());
+        if(column != 2){
+            Model clickedModel = tableModel.getModel3d(row);
+        }
+        //renderer = new Renderer(clickedModel, openGlPanel.getWidth(), openGlPanel.getHeight());
+        //glCanvas.addGLEventListener(renderer);
+    }//GEN-LAST:event_jTableModelsMouseClicked
     
     /*
     private void formComponentResized(java.awt.event.ComponentEvent evt) {                                      
@@ -990,6 +1160,30 @@ public class GUI extends javax.swing.JFrame {
         //</editor-fold>
         //</editor-fold>
         //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
@@ -1011,11 +1205,11 @@ public class GUI extends javax.swing.JFrame {
     private javax.swing.JPanel infoLeftPanel;
     private javax.swing.JPanel infoRightPanel;
     private javax.swing.JPanel informationPanel;
-    private javax.swing.JList jList1;
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTabbedPane jTabbedPane1;
     private javax.swing.JTabbedPane jTabbedPane2;
+    private javax.swing.JTable jTableModels;
     private javax.swing.JPanel leftPanel;
     private javax.swing.JLabel lengthLabel;
     private javax.swing.JLabel lengthValueLabel;
@@ -1026,7 +1220,6 @@ public class GUI extends javax.swing.JFrame {
     private javax.swing.JLabel pointLabel;
     private javax.swing.JLabel pointsCountLabel;
     private javax.swing.JPanel positionOfPlanePanel;
-    private javax.swing.JProgressBar progressBar;
     private javax.swing.JPanel projection2DPanel;
     private javax.swing.JLabel rPlaneSizeLabel;
     private javax.swing.JSlider rPlaneSizeSlider;
