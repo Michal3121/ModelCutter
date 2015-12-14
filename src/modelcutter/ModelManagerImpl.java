@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.vecmath.Point3f;
+import javax.vecmath.Vector3f;
 import org.j3d.loaders.InvalidFormatException;
 import org.j3d.loaders.stl.STLFileReader;
 
@@ -47,7 +48,7 @@ public class ModelManagerImpl implements ModelManager {
         
             while(reader.getNextFacet(normal, vertex)){
                 
-                Point3f triangleNorm = new Point3f((float) normal[0], (float) normal[1], (float) normal[2]);
+                Vector3f triangleNorm = new Vector3f((float) normal[0], (float) normal[1], (float) normal[2]);
                 Point3f[] triangleVertices = this.transformVerticesToPoint3f(vertex);
                 long[] triangleVerticesID = new long[3];
                 
@@ -122,54 +123,59 @@ public class ModelManagerImpl implements ModelManager {
     }
     
     @Override
-    public void exportModel(File path, Model model) {
+    public Void exportModel(File path, List<Model> models) {
         
         StlTextFile writer = new StlTextFile(path);
         
         try {
-            writer.writeToFile(this.facetTransformerToSCAD(model));
+            writer.writeToFile(this.facetTransformerToSCAD(models));
         } catch (IOException ex) {
             Logger.getLogger(ModelManagerImpl.class.getName()).log(Level.SEVERE, null, ex);
         }
         
+        return null; // docasne riesenie pouzit lambdu z Javy 8
     }
     
-    public void exportModelBinary(File path, Model model){
+    public void exportModelBinary(File path, List<Model> models){
         
         StlBinaryFile writer = new StlBinaryFile(path);
         
         try {
-            writer.writeToFile(this.facetTransformerToSCAD(model));
+            writer.writeToFile(this.facetTransformerToSCAD(models));
         } catch (IOException ex) {
             Logger.getLogger(ModelManagerImpl.class.getName()).log(Level.SEVERE, null, ex);
         }
         
     }
     
-    private List<Facet> facetTransformerToSCAD(Model model){
-        Map<Long, MTriangle> triangleMap = model.getTriangleMesh();
-        Map<Long, MVertex> verticesMap = model.getVertices(); 
-        List<Facet> listOfFacetsSCAD = new ArrayList<>();  
+    private List<Facet> facetTransformerToSCAD(List<Model> models){
+        List<Facet> listOfFacetsSCAD = new ArrayList<>();
         
-        for(long key : triangleMap.keySet()){
-            MTriangle currentTriangle = triangleMap.get(key);
-            long[] verticesKeys = currentTriangle.getTriangleVertices();
-            Point3f triangleNormal = currentTriangle.getTriangleNormal();
-            
-            Point3f[] triangleVertices = new Point3f[3];
-            Coords3d[] coordsSCAD = new Coords3d[3];
-            
-            for(int i = 0; i < 3; i++){
-                triangleVertices[i] = verticesMap.get(verticesKeys[i]).getVertex();
-                coordsSCAD[i] = new Coords3d((double)triangleVertices[i].x, (double) triangleVertices[i].y, (double) triangleVertices[i].z);
+        for(Model currModel : models){
+            Map<Long, MTriangle> triangleMap = currModel.getTriangleMesh();
+            Map<Long, MVertex> verticesMap = currModel.getVertices(); 
+
+
+            for(long key : triangleMap.keySet()){
+                MTriangle currentTriangle = triangleMap.get(key);
+                long[] verticesKeys = currentTriangle.getTriangleVertices();
+                Vector3f triangleNormal = currentTriangle.getTriangleNormal();
+
+                Point3f[] triangleVertices = new Point3f[3];
+                Coords3d[] coordsSCAD = new Coords3d[3];
+
+                for(int i = 0; i < 3; i++){
+                    triangleVertices[i] = verticesMap.get(verticesKeys[i]).getVertex();
+                    coordsSCAD[i] = new Coords3d((double)triangleVertices[i].x, (double) triangleVertices[i].y, (double) triangleVertices[i].z);
+                }
+
+                Coords3d normalSCAD = new Coords3d((double) triangleNormal.x,(double) triangleNormal.y,(double) triangleNormal.z);
+                Triangle3d triangleSCAD = new Triangle3d(coordsSCAD[0], coordsSCAD[1], coordsSCAD[2]); 
+                listOfFacetsSCAD.add(new Facet(triangleSCAD, normalSCAD, Color.lightGray));   
             }
-            
-            Coords3d normalSCAD = new Coords3d((double) triangleNormal.x,(double) triangleNormal.y,(double) triangleNormal.z);
-            Triangle3d triangleSCAD = new Triangle3d(coordsSCAD[0], coordsSCAD[1], coordsSCAD[2]); 
-            listOfFacetsSCAD.add(new Facet(triangleSCAD, normalSCAD, Color.lightGray));   
+            System.out.println("Ukladanie Trojuholniky = " + triangleMap.keySet().size());
+            System.out.println("Ukladanie Vrcholy = " + verticesMap.keySet().size());
         }
-        System.out.println("Ukladanie Trojuholniky = " + triangleMap.keySet().size());
-        System.out.println("Ukladanie Vrcholy = " + verticesMap.keySet().size());
         System.out.println("Ukladanie SCAD List : " + listOfFacetsSCAD.size());
         return listOfFacetsSCAD;
     }

@@ -7,6 +7,7 @@ package modelcutter;
 
 import javax.vecmath.Point2f;
 import javax.vecmath.Point3f;
+import javax.vecmath.Vector3f;
 
 /**
  *
@@ -24,7 +25,7 @@ public class SquaredPlane extends GeneralPlane implements Plane {
         this.width = width;
     }
     
-    public SquaredPlane(Point3f point, Point3f normal, float width){
+    public SquaredPlane(Point3f point, Vector3f normal, float width){
         super(point, normal);
         this.width = width;
     }

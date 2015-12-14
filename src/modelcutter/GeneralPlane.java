@@ -10,6 +10,7 @@ import javax.vecmath.Matrix3d;
 import javax.vecmath.Point2f;
 import javax.vecmath.Point3f;
 import javax.vecmath.Vector3d;
+import javax.vecmath.Vector3f;
 
 /**
  *
@@ -18,10 +19,10 @@ import javax.vecmath.Vector3d;
 public class GeneralPlane {
     
     private Point3f centerPoint;
-    private Point3f normal;
+    private Vector3f normal;
     private Matrix3d transformationMatrix;
 
-    public GeneralPlane(Point3f point, Point3f normal){
+    public GeneralPlane(Point3f point, Vector3f normal){
         this.centerPoint = point;
         this.normal = normal;
         this.transformationMatrix = this.computeTransformationMatrix();
@@ -30,7 +31,7 @@ public class GeneralPlane {
     public GeneralPlane(Point3f centerPoint) {
         this.centerPoint = centerPoint;
         //this.normal = new Point3f(1.0f, -1.0f, 0.0f);
-        this.normal = new Point3f(0.0f, 1.0f, 0.0f);
+        this.normal = new Vector3f(0.0f, 1.0f, 0.0f);
         //this.normal = new Point3f(0.0f, 0.0f, 1.0f);
     }
 
@@ -42,11 +43,11 @@ public class GeneralPlane {
         this.centerPoint = centerPoint;
     }
 
-    public Point3f getNormal() {
+    public Vector3f getNormal() {
         return normal;
     }
 
-    public void setNormal(Point3f normal) {
+    public void setNormal(Vector3f normal) {
         this.normal = normal;
     }
     

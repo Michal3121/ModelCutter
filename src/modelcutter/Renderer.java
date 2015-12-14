@@ -37,6 +37,7 @@ import javax.media.opengl.glu.GLU;
 import javax.vecmath.Point3f;
 import javax.vecmath.Vector2d;
 import javax.vecmath.Vector3d;
+import javax.vecmath.Vector3f;
 
 /**
  *
@@ -453,7 +454,7 @@ public class Renderer  implements GLEventListener {
             MTriangle currentTriangle = triangles.get(key);
             long[] verticesKeys =  currentTriangle.getTriangleVertices();
             
-            Point3f normal = currentTriangle.getTriangleNormal();
+            Vector3f normal = currentTriangle.getTriangleNormal();
             Point3f vertex0 = vertices.get(verticesKeys[0]).getVertex();
             Point3f vertex1 = vertices.get(verticesKeys[1]).getVertex();
             Point3f vertex2 = vertices.get(verticesKeys[2]).getVertex();

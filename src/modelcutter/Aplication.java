@@ -19,7 +19,7 @@ import java.util.Set;
 import javax.vecmath.Point2f;
 import javax.vecmath.Point3f;
 import javax.vecmath.Vector3d;
-import poly2Tri.Polygon;
+import javax.vecmath.Vector3f;
 import static poly2Tri.Triangulation.triangulate;
 
 
@@ -771,7 +771,7 @@ public class Aplication {
                 triangleVerticesIDs[i] = heVertex.getId();
             }
             
-            MTriangle newTriangle = new MTriangle(-1, -1, new Point3f(1,0,0), triangleVerticesIDs);
+            MTriangle newTriangle = new MTriangle(-1, -1, new Vector3f(1,0,0), triangleVerticesIDs);
             listOfMVertices.add(newTriangle);
         }
         
@@ -824,8 +824,8 @@ public class Aplication {
         long triangleID = modelManager.findMaxTriangleID(cutModel) + 1;
         
         Map<Point3f, Long> auxVerticesMap = new HashMap<>();
-        Point3f planeNorm = plane.getNormal();
-        Point3f newTriangleNorm = new Point3f(-planeNorm.x, -planeNorm.y, -planeNorm.z);
+        Vector3f newTriangleNorm = plane.getNormal();
+        newTriangleNorm.normalize();
         
         for(MTriangle currNewTriangle : newTriangles){
             long[] verticesIDs = currNewTriangle.getTriangleVertices();
@@ -875,6 +875,11 @@ public class Aplication {
                     }
                 }
             }
+            
+            if(!this.isTriangleCounterclockwise(newVerticesIDs, cutModel)){
+                newVerticesIDs = this.getReverseArray(newVerticesIDs);
+            }
+            
             MTriangle newTriangle = new MTriangle(triangleID, 0, newTriangleNorm, newVerticesIDs);
             triangleMesh.put(triangleID, newTriangle);
             triangleID++;
@@ -891,7 +896,10 @@ public class Aplication {
         
         long triangleID = modelManager.findMaxTriangleID(cutModel) + 1;
         
-        Point3f newTriangleNorm = plane.getNormal();
+        Vector3f planeNorm = plane.getNormal();
+        Vector3f newTriangleNorm = new Vector3f(-planeNorm.x, -planeNorm.y, -planeNorm.z);
+        newTriangleNorm.normalize();
+        
         for(MTriangle currNewTriangle : newTriangles){
             long[] verticesIDs = currNewTriangle.getTriangleVertices();
             
@@ -958,6 +966,33 @@ public class Aplication {
         }
         
         return listOfmodels;
+    }
+    
+    private Boolean isTriangleCounterclockwise(long[] verticesIDs, Model model){
+        Map<Long, MVertex> triangleVertices = model.getVertices();
+        float areaSum = 0;
+        
+        for(int k = 0; k < 3; k++){
+            Point3f vertex1 = triangleVertices.get(verticesIDs[k]).getVertex();
+            Point3f vertex2 = triangleVertices.get(verticesIDs[(k+1) % 3]).getVertex();
+            
+            areaSum += vertex1.x * vertex2.y - vertex1.y * vertex2.x;
+        }
+        areaSum = areaSum / 2;
+        
+        return areaSum > 0;
+    }
+    
+    private long[] getReverseArray(long[] array){
+        int length = array.length;
+        
+        for(int i = 0; i < length / 2; i++){
+            long tmp = array[i];
+            array[i] = array[length - i - 1];
+            array[length - i - 1] = tmp;
+        }
+        
+        return array;
     }
     
     private List<Color> addColors(){

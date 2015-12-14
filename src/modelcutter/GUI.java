@@ -55,8 +55,10 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
 import javax.vecmath.Point3f;
+import javax.vecmath.Vector3f;
 import modelcutter.gui.ColorCellRenderer;
 import modelcutter.gui.Models3dTableModel;
+import modelcutter.gui.ExportingDialogPanel;
 
 /**
  *
@@ -210,64 +212,20 @@ public class GUI extends javax.swing.JFrame {
         
     }
     
-    private class LoadModelSwingWorker extends SwingWorker<Model, Integer>{
-        private File path;
-        
-        private LoadModelSwingWorker(File path){
-            this.path = path;
-            statusLabel.setText("Loading model ...");
-        }
-        
-        @Override
-        protected Model doInBackground() throws Exception {
-            Model model = modelManager.loadModel(path);
-            return model;
-        }
-        
-        @Override
-        protected void done(){
-            try {
-                newModel = this.get();
-                models.add(newModel);
-            } catch (InterruptedException | ExecutionException ex) {
-                Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            
-            GUI.this.reloadRenderer(models);
-
-            float planeX = newModel.getModelCenter().x;
-            float planeY = newModel.getModelCenter().y;
-            float planeZ = newModel.getModelCenter().z;
-
-            planeCenter = new Point3f(planeX, planeY, planeZ);  
-            renderer.setPlane(new CircularPlane(planeCenter, new Point3f(0,1,0), 50));
-            statusLabel.setText(" ");
-            GUI.this.refreshInformationPanel(newModel);
-            
-            newModel.setColor(new Color(204, 255, 153));
-            //jTableModels.clearSelection();
-            jTableModels.getSelectionModel().clearSelection();
-            tableModel.removeAllModels3d();
-            tableModel.addModel3d(newModel);
-        }  
-    }
-    
     private void initMenu(){
         
         JPopupMenu.setDefaultLightWeightPopupEnabled(false);
         
-        JMenuItem saveAsAction = new JMenuItem("Save As...");
-        JMenuItem loadModel = new JMenuItem("Open File...");
-        JMenuItem exitAction = new JMenuItem("Exit");
+        JMenuItem loadItem = new JMenuItem("Open File...");
+        JMenuItem exportItem = new JMenuItem("Export...");
+        JMenuItem exitItem = new JMenuItem("Exit");
         
         JMenuItem about = new JMenuItem("About");
         
-        //file.add(saveAction);
-        file.add(saveAsAction);
-        file.add(loadModel);
-        file.addSeparator();
-        
-        file.add(exitAction);
+        file.add(loadItem);
+        file.add(exportItem);
+        file.addSeparator();       
+        file.add(exitItem);
         
         help.add(about);
         
@@ -299,68 +257,207 @@ public class GUI extends javax.swing.JFrame {
                 }
         });
         
-        loadModel.addActionListener(new ActionListener(){
+        loadItem.addActionListener(new ActionListener(){
             
             @Override
             public void actionPerformed(ActionEvent e) {
-                JFileChooser openingChooser = new JFileChooser(); 
-                FileNameExtensionFilter stl = new FileNameExtensionFilter("STL Files (*.stl;*.STL)", "stl", "STL");
-                
-                openingChooser.addChoosableFileFilter(stl);   
-                openingChooser.setFileFilter(stl);
-                
-                int openValue = openingChooser.showOpenDialog(null);
-                                
-                if(openValue == JFileChooser.CANCEL_OPTION){
-                    return;
-                }
-               
-                if(openValue == JFileChooser.APPROVE_OPTION){
-                    models.clear();
-                    File file = new File(openingChooser.getSelectedFile().getAbsolutePath());
-                    if(GUI.this.isFileInStlAsciiFormat(file)){
-                        LoadModelSwingWorker loadSwingWorker = new LoadModelSwingWorker(file);
-                        try {
-                            loadSwingWorker.execute();
-                        } catch (Exception ex) {
-                            Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
-                        }
-                        }else{
-                            String message = "Application does not support models in STL binary format.";
-                            JOptionPane.showMessageDialog(GUI.this, message, "Wrong format", JOptionPane.INFORMATION_MESSAGE);
-                        }
-                }
-            }  
+                GUI.this.showOpenDialog();
+            }
+            
         });
         
-        saveAsAction.addActionListener(new ActionListener(){ 
+        exportItem.addActionListener(new ActionListener(){ 
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                JFileChooser savingChooser = new JFileChooser(); 
-                FileNameExtensionFilter stl = new FileNameExtensionFilter("STL Files (*.stl;*.STL)", "stl", "STL");
-                
-                savingChooser.addChoosableFileFilter(stl);   
-                savingChooser.setFileFilter(stl);
-                
-                int saveValue = savingChooser.showSaveDialog(null);
-                
-                if(saveValue == JFileChooser.CANCEL_OPTION){
-                    return;
+                GUI.this.showExportDialog(tableModel.getAllmodels3d());
+            }
+            
+        });
+        
+        exitItem.addActionListener(new ActionListener(){
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.exit(0);
+            }
+            
+        });
+    }
+    
+    private void showOpenDialog(){
+        JFileChooser openingChooser = new JFileChooser(); 
+        FileNameExtensionFilter stl = new FileNameExtensionFilter("STL Files (*.stl;*.STL)", "stl", "STL");
+
+        openingChooser.addChoosableFileFilter(stl);   
+        openingChooser.setFileFilter(stl);
+
+        int openValue = openingChooser.showOpenDialog(this);
+
+        if(openValue == JFileChooser.CANCEL_OPTION){
+            return;
+        }
+
+        if(openValue == JFileChooser.APPROVE_OPTION){
+            models.clear();
+            File openFile = new File(openingChooser.getSelectedFile().getAbsolutePath());
+            if(GUI.this.isFileInStlAsciiFormat(openFile)){
+                LoadModelSwingWorker loadSwingWorker = new LoadModelSwingWorker(openFile);
+                try {
+                    loadSwingWorker.execute();
+                } catch (Exception ex) {
+                    Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
                 }
-                
-                if(saveValue == JFileChooser.APPROVE_OPTION){
-                    
-                    System.out.println("Cesta " + savingChooser.getSelectedFile().getAbsolutePath());
-                    modelManager.exportModel(new File(savingChooser.getSelectedFile().getAbsolutePath() + ".stl"), models.get(0));
-                
+                }else{
+                    String message = "Application does not support models in STL binary format.";
+                    JOptionPane.showMessageDialog(GUI.this, message, "Wrong format", JOptionPane.INFORMATION_MESSAGE);
+                }
+        }
+    }
+    
+    public boolean isFileInStlAsciiFormat(File file){
+        try(Reader reader = new FileReader(file)){
+            BufferedReader br = new BufferedReader(reader);
+            char[] first5Char = new char[5];
+            
+            br.read(first5Char, 0, 5);
+            String solid = String.valueOf(first5Char);
+            String lowerSolid = solid.toLowerCase();
+            
+            return lowerSolid.equals("solid");
+        }catch(IOException ex){
+            System.out.println("Chyba/////////");
+        }
+        return false;
+    }
+    
+    private class LoadModelSwingWorker extends SwingWorker<Model, Integer>{
+        private File path;
+        
+        private LoadModelSwingWorker(File path){
+            this.path = path;
+            statusLabel.setText("Loading model ...");
+        }
+        
+        @Override
+        protected Model doInBackground() throws Exception {
+            Model model = modelManager.loadModel(path);
+            return model;
+        }
+        
+        @Override
+        protected void done(){
+            try {
+                newModel = this.get();
+                models.add(newModel);
+            } catch (InterruptedException | ExecutionException ex) {
+                Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+            GUI.this.reloadRenderer(models);
+
+            float planeX = newModel.getModelCenter().x;
+            float planeY = newModel.getModelCenter().y;
+            float planeZ = newModel.getModelCenter().z;
+
+            planeCenter = new Point3f(planeX, planeY, planeZ);  
+            renderer.setPlane(new CircularPlane(planeCenter, new Vector3f(0,1,0), 50));
+            statusLabel.setText(" ");
+            GUI.this.refreshInformationPanel(newModel);
+            
+            newModel.setColor(new Color(204, 255, 153));
+            //jTableModels.clearSelection();
+            jTableModels.getSelectionModel().clearSelection();
+            tableModel.removeAllModels3d();
+            tableModel.addModel3d(newModel);
+        }  
+    }
+    
+    private void showExportDialog(List<Model> allModels){
+        ExportingDialogPanel savingDialog = new ExportingDialogPanel(allModels);
+        int response = JOptionPane.showOptionDialog(this, savingDialog, "Choose models", 
+                                                    JOptionPane.OK_CANCEL_OPTION, 
+                                                    JOptionPane.PLAIN_MESSAGE, 
+                                                    null, null, null);
+        
+        if(response == 0){ // response is OK
+            List<Model> modelsToSave = savingDialog.getAllSelectedModels();
+            
+            if(!modelsToSave.isEmpty()){
+                if(savingDialog.exportToASCII()){
+                    this.saveModel(0, modelsToSave);
+                }else{
+                    this.saveModel(1, modelsToSave);
                 }
             }
+        }
+    }
+    
+    private void saveModel(int outputFormat, List<Model> models){
+        JFileChooser savingChooser = new JFileChooser(); 
+        FileNameExtensionFilter stl = new FileNameExtensionFilter("STL Files (*.stl;*.STL)", "stl", "STL");
+
+        savingChooser.addChoosableFileFilter(stl);   
+        savingChooser.setFileFilter(stl);
         
-        });
+        String namesOfModels = this.getNamesOfModels(models);
+        savingChooser.setSelectedFile(new File(namesOfModels));
+
+        int saveValue = savingChooser.showSaveDialog(this);
+
+        if(saveValue == JFileChooser.CANCEL_OPTION){
+            return;
+        }
+
+        if(saveValue == JFileChooser.APPROVE_OPTION){
+            File fileToSave = new File(savingChooser.getSelectedFile().getAbsolutePath() + ".stl");
             
+            if(outputFormat == 0){
+                System.out.println("Cesta " + savingChooser.getSelectedFile().getAbsolutePath());
+                ExportModelSwingWorker exportSwingWorker = new ExportModelSwingWorker(fileToSave, models);
+                exportSwingWorker.execute();
+                //modelManager.exportModel(new File(savingChooser.getSelectedFile().getAbsolutePath() + ".stl"), models);
+            }else{
+                modelManager.exportModelBinary(new File(savingChooser.getSelectedFile().getAbsolutePath() + ".stl"), models);
+            }
+        }
+    }
+    
+    private String getNamesOfModels(List<Model> models){
+        String name = "";
+        int numberOfModels = models.size();
         
+        for(int i = 0; i < models.size() - 1; i++){
+            Model currModel = models.get(i);
+            name+= currModel.getModelName();
+            name+=" ";
+        }
         
+        name += models.get(numberOfModels - 1).getModelName();
+        
+        return name;
+    }
+    
+    private class ExportModelSwingWorker extends SwingWorker<Void, Void>{
+        
+        private File path;
+        private List<Model> modelsToSave;
+        
+        private ExportModelSwingWorker(File path, List<Model> modelsToSave){
+            this.path = path;
+            this.modelsToSave = modelsToSave;
+            statusLabel.setText("Exporting model ...");
+        }
+        
+        @Override
+        protected Void doInBackground() throws Exception {
+            return modelManager.exportModel(this.path, this.modelsToSave);
+        }
+        
+        @Override
+        protected void done(){
+            statusLabel.setText(" ");
+        }
     }
     
     public void rendererRepaint(){
@@ -379,22 +476,6 @@ public class GUI extends javax.swing.JFrame {
         
         return modelsToRender;
     } 
-    
-    public boolean isFileInStlAsciiFormat(File file){
-        try(Reader reader = new FileReader(file)){
-            BufferedReader br = new BufferedReader(reader);
-            char[] first5Char = new char[5];
-            
-            br.read(first5Char, 0, 5);
-            String solid = String.valueOf(first5Char);
-            String lowerSolid = solid.toLowerCase();
-            
-            return lowerSolid.equals("solid");
-        }catch(IOException ex){
-            System.out.println("Chyba/////////");
-        }
-        return false;
-    }
     
     private void reloadRenderer(List<Model> listOfModels){
         double mouseZoom = renderer.getMouseZoom();
@@ -1073,7 +1154,7 @@ public class GUI extends javax.swing.JFrame {
         Set<Long> intersectionTriangles = new HashSet<>();
         List<List<Long>> allParts;
         
-        Plane plane = new CircularPlane(planeCenter /*new Point3f(0,0,0)*/, new Point3f(0,1,0) /*new Point3f(-1,1,0)*/, 500);
+        Plane plane = new CircularPlane(planeCenter /*new Point3f(0,0,0)*/, /*new Vector3f(0,1,0)*/ new Vector3f(-1,1,0), 500);
         //Plane plane = new CircularPlane(/*planeCenter*/ new Point3f(0,0,0), /*new Point3f(0,1,0)*/ new Point3f(0,-1,0) /*new Point3f(1,-1,0)*/ /*new Point3f(-1,1,0)*/ , 500);
         //app.setComponent(modelWithMap);
         intersectionTriangles.addAll(app.getAllIntersectionTriangles(newModel, plane));

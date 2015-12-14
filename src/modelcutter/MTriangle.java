@@ -8,7 +8,7 @@ package modelcutter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import javax.vecmath.Point3f;
+import javax.vecmath.Vector3f;
 
 /**
  *
@@ -17,12 +17,12 @@ import javax.vecmath.Point3f;
 public class MTriangle {
     private final long triangleID;
     private long objectID;
-    private Point3f triangleNormal;
+    private Vector3f triangleNormal;
     private long[] triangleVertices = new long[3];
     private List<Long> adjacentTriangles;
     private boolean intersecting;
 
-    public MTriangle(long triangleID, long objectID, Point3f norm, long[] triangleVertices) {
+    public MTriangle(long triangleID, long objectID, Vector3f norm, long[] triangleVertices) {
         this.triangleID = triangleID;
         this.objectID = objectID;
         this.triangleNormal = norm;
@@ -43,11 +43,11 @@ public class MTriangle {
         this.objectID = objectID;
     }
 
-    public Point3f getTriangleNormal() {
+    public Vector3f getTriangleNormal() {
         return triangleNormal;
     }
 
-    public void setTriangleNormal(Point3f triangleNormal) {
+    public void setTriangleNormal(Vector3f triangleNormal) {
         this.triangleNormal = triangleNormal;
     }
 

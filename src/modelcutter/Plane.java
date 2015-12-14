@@ -7,6 +7,7 @@ package modelcutter;
 
 import javax.vecmath.Point2f;
 import javax.vecmath.Point3f;
+import javax.vecmath.Vector3f;
 
 /**
  *
@@ -15,7 +16,7 @@ import javax.vecmath.Point3f;
 public interface Plane {
     public Point3f getCenterPoint();
     
-    public Point3f getNormal();
+    public Vector3f getNormal();
     
     public Point2f getCenteredProjectionPoint(Point3f point3D);
     

@@ -6,6 +6,7 @@
 package modelcutter;
 
 import java.io.File;
+import java.util.List;
 
 /**
  *
@@ -15,7 +16,7 @@ public interface ModelManager {
     
     Model loadModel(File path);
     
-    void exportModel(File path, Model model);
+    Void exportModel(File path, List<Model> model);
     
     /*
     void updateModel(Model model);

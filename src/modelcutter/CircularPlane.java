@@ -7,6 +7,7 @@ package modelcutter;
 
 import javax.vecmath.Point2f;
 import javax.vecmath.Point3f;
+import javax.vecmath.Vector3f;
 
 /**
  *
@@ -24,7 +25,7 @@ public class CircularPlane extends GeneralPlane implements Plane {
         this.radius = radius;
     }
     
-    public CircularPlane(Point3f point, Point3f normal, float radius){
+    public CircularPlane(Point3f point, Vector3f normal, float radius){
         super(point, normal);
         this.radius = radius;
     }
