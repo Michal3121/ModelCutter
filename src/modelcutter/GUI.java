@@ -13,6 +13,8 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -46,9 +48,14 @@ import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
+import javax.swing.JSlider;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.ToolTipManager;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -76,8 +83,9 @@ public class GUI extends javax.swing.JFrame {
     private final ModelManagerImpl modelManager;
     private List<Model> models;
     private Model newModel;
-    private Point3f planeCenter;
     private Models3dTableModel tableModel;
+    private Plane currPlane;
+    private Point3f currCenterOfModels;
    
     public void setSelectedModelInRenderer(Model selectedModel){
         this.renderer.setSelectedModel(selectedModel);
@@ -90,6 +98,8 @@ public class GUI extends javax.swing.JFrame {
         super.setTitle("ModelCutter");
         initComponents();
         initMenu();
+        this.initPlanePanels();
+        this.disablePlanePanels();
         
         addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override
@@ -301,7 +311,7 @@ public class GUI extends javax.swing.JFrame {
         if(openValue == JFileChooser.APPROVE_OPTION){
             models.clear();
             File openFile = new File(openingChooser.getSelectedFile().getAbsolutePath());
-            if(GUI.this.isFileInStlAsciiFormat(openFile)){
+            if(this.isFileInStlAsciiFormat(openFile)){
                 LoadModelSwingWorker loadSwingWorker = new LoadModelSwingWorker(openFile);
                 try {
                     loadSwingWorker.execute();
@@ -354,14 +364,6 @@ public class GUI extends javax.swing.JFrame {
                 Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
             }
             
-            GUI.this.reloadRenderer(models);
-
-            float planeX = newModel.getModelCenter().x;
-            float planeY = newModel.getModelCenter().y;
-            float planeZ = newModel.getModelCenter().z;
-
-            planeCenter = new Point3f(planeX, planeY, planeZ);  
-            renderer.setPlane(new CircularPlane(planeCenter, new Vector3f(0,1,0), 50));
             statusLabel.setText(" ");
             GUI.this.refreshInformationPanel(newModel);
             
@@ -370,6 +372,14 @@ public class GUI extends javax.swing.JFrame {
             jTableModels.getSelectionModel().clearSelection();
             tableModel.removeAllModels3d();
             tableModel.addModel3d(newModel);
+            
+            double maxDimension = GUI.this.modelManager.findLargestDimension(newModel);
+            
+            GUI.this.enablePlanePanels();
+            GUI.this.initPositionPanel(0, (int) - maxDimension * 1, (int) maxDimension * 1);
+            GUI.this.initSizePanel((int) maxDimension, 0, (int) maxDimension * 2);
+            GUI.this.initPlane((float) maxDimension);
+            GUI.this.reloadRenderer(models);
         }  
     }
     
@@ -488,6 +498,571 @@ public class GUI extends javax.swing.JFrame {
         renderer.setQuatFinal(currQuat);
         renderer.setQuatAllRot(allRot);
         glCanvas.addGLEventListener(renderer);
+        
+        this.renderer.setPlane(currPlane);
+        this.currCenterOfModels = this.modelManager.findCenterOfModels(listOfModels);
+    }
+    
+    private void enablePlanePanels(){
+        this.planeComboBox.setEnabled(true);
+        this.selectPlaneLabel.setEnabled(true);
+        
+        this.setEnabledRotationPanel(true);
+        this.setEnabledSizePanel(true);
+        this.setEnabledPositionPanel(true);
+    }
+    
+    private void disablePlanePanels(){
+        this.planeComboBox.setEnabled(false);
+        this.selectPlaneLabel.setEnabled(false);
+        
+        this.setEnabledRotationPanel(false);
+        this.setEnabledSizePanel(false);
+        this.setEnabledPositionPanel(false);
+    }
+    
+    private void setEnabledRotationPanel(Boolean enabled){
+        this.xPlaneRotationLabel.setEnabled(enabled);
+        this.xPlaneRotationSlider.setEnabled(enabled);
+        this.xPlaneRotationSpinner.setEnabled(enabled);
+        
+        this.yPlaneRotationLabel.setEnabled(enabled);
+        this.yPlaneRotationSlider.setEnabled(enabled);
+        this.yPlaneRotationSpinner.setEnabled(enabled);
+        
+        this.zPlaneRotationLabel.setEnabled(enabled);
+        this.zPlaneRotationSlider.setEnabled(enabled);
+        this.zPlaneRotationSpinner.setEnabled(enabled);
+    }
+    
+    private void setEnabledSizePanel(Boolean enabled){
+        this.xPlaneSizeLabel.setEnabled(enabled);
+        this.xPlaneSizeSlider.setEnabled(enabled);
+        this.xPlaneSizeSpinner.setEnabled(enabled);
+        
+        this.yPlaneSizeLabel.setEnabled(enabled);
+        this.yPlaneSizeSlider.setEnabled(enabled);
+        this.yPlaneSizeSpinner.setEnabled(enabled);
+        
+        this.rPlaneSizeLabel.setEnabled(enabled);
+        this.rPlaneSizeSlider.setEnabled(enabled);
+        this.rPlaneSizeSpinner.setEnabled(enabled);
+    }
+    
+    private void setEnabledPositionPanel(Boolean enabled){
+        this.xPlanePositionLabel.setEnabled(enabled);
+        this.xPlanePositionSlider.setEnabled(enabled);
+        this.xPlanePositionSpinner.setEnabled(enabled);
+        
+        this.yPlanePositionLabel.setEnabled(enabled);
+        this.yPlanePositionSlider.setEnabled(enabled);
+        this.yPlanePositionSpinner.setEnabled(enabled);
+        
+        this.zPlanePositionLabel.setEnabled(enabled);
+        this.zPlanePositionSlider.setEnabled(enabled);
+        this.zPlanePositionSpinner.setEnabled(enabled);
+    }
+    
+    private void initPlanePanels(){
+        this.initRotationPanel();
+        this.addChangeListenersToRotationPanel();
+        
+        this.addChangeListenersToSizePanel();
+        
+        this.addChangeListenersToPositionPanel();
+        
+        this.planeComboBox.addItemListener(new ItemListener() {
+
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                String selectedItem = (String) e.getItem();
+                
+                switch(selectedItem) {
+                    case "Circle" :
+                        GUI.this.setCurrPlaneToCircle();
+                        GUI.this.renderer.setPlane(currPlane);
+                        return;
+                    case "Square" :
+                        GUI.this.setCurrPlaneToSquare();
+                        GUI.this.renderer.setPlane(currPlane);
+                        return;
+                    case "Rectangle" :
+                        GUI.this.setToCurrPlaneToRectangle();
+                        GUI.this.renderer.setPlane(currPlane);
+                }
+            }
+        });
+    }
+    
+    private void initRotationPanel(){
+        int DEFAULT_VALUE = 0;
+        int MIN_VALUE = -180;
+        int MAX_VALUE = 180;
+        int INCREMENT = 1;
+        
+        this.xPlaneRotationSlider.setValue(DEFAULT_VALUE);
+        this.xPlaneRotationSlider.setMinimum(MIN_VALUE);
+        this.xPlaneRotationSlider.setMaximum(MAX_VALUE);
+        this.xPlaneRotationSlider.setMinorTickSpacing(INCREMENT);
+        
+        SpinnerNumberModel xSpinnerNumberModel = new SpinnerNumberModel(DEFAULT_VALUE, MIN_VALUE, MAX_VALUE, INCREMENT); 
+        this.xPlaneRotationSpinner.setModel(xSpinnerNumberModel);
+        
+        this.yPlaneRotationSlider.setValue(DEFAULT_VALUE);
+        this.yPlaneRotationSlider.setMinimum(MIN_VALUE);
+        this.yPlaneRotationSlider.setMaximum(MAX_VALUE);
+        this.yPlaneRotationSlider.setMinorTickSpacing(INCREMENT);
+        
+        SpinnerNumberModel ySpinnerNumberModel = new SpinnerNumberModel(DEFAULT_VALUE, MIN_VALUE, MAX_VALUE, INCREMENT);
+        this.yPlaneRotationSpinner.setModel(ySpinnerNumberModel);
+        
+        this.zPlaneRotationSlider.setValue(DEFAULT_VALUE);
+        this.zPlaneRotationSlider.setMinimum(MIN_VALUE);
+        this.zPlaneRotationSlider.setMaximum(MAX_VALUE);
+        this.zPlaneRotationSlider.setMinorTickSpacing(INCREMENT);
+        
+        SpinnerNumberModel zSpinnerNumberModel = new SpinnerNumberModel(DEFAULT_VALUE, MIN_VALUE, MAX_VALUE, INCREMENT);
+        this.zPlaneRotationSpinner.setModel(zSpinnerNumberModel);
+            
+    }
+    
+    private void initSizePanel(int defaultValue, int minValue, int maxValue){
+        int INCREMENT = 1;
+        
+        this.xPlaneSizeSlider.setValue(defaultValue);
+        this.xPlaneSizeSlider.setMinimum(minValue);
+        this.xPlaneSizeSlider.setMaximum(maxValue);
+        this.xPlaneSizeSlider.setMinorTickSpacing(INCREMENT);
+        
+        SpinnerNumberModel xSpinnerNumberModel = new SpinnerNumberModel(defaultValue, minValue, maxValue, INCREMENT); 
+        this.xPlaneSizeSpinner.setModel(xSpinnerNumberModel);
+        
+        this.yPlaneSizeSlider.setValue(defaultValue);
+        this.yPlaneSizeSlider.setMinimum(minValue);
+        this.yPlaneSizeSlider.setMaximum(maxValue);
+        this.yPlaneSizeSlider.setMinorTickSpacing(INCREMENT);
+        
+        SpinnerNumberModel ySpinnerNumberModel = new SpinnerNumberModel(defaultValue, minValue, maxValue, INCREMENT);
+        this.yPlaneSizeSpinner.setModel(ySpinnerNumberModel);
+        
+        this.rPlaneSizeSlider.setValue(defaultValue / 2);
+        this.rPlaneSizeSlider.setMinimum(minValue);
+        this.rPlaneSizeSlider.setMaximum(maxValue / 2);
+        this.rPlaneSizeSlider.setMinorTickSpacing(INCREMENT);
+        
+        SpinnerNumberModel zSpinnerNumberModel = new SpinnerNumberModel(defaultValue / 2, minValue, maxValue / 2, INCREMENT);
+        this.rPlaneSizeSpinner.setModel(zSpinnerNumberModel);
+        
+    }
+    
+    private void initPositionPanel(int defaultValue, int minValue, int maxValue){
+        int INCREMENT = 1;
+        
+        this.xPlanePositionSlider.setValue(defaultValue);
+        this.xPlanePositionSlider.setMinimum(minValue);
+        this.xPlanePositionSlider.setMaximum(maxValue);
+        this.xPlanePositionSlider.setMinorTickSpacing(INCREMENT);
+        
+        SpinnerNumberModel xSpinnerNumberModel = new SpinnerNumberModel(defaultValue, minValue, maxValue, INCREMENT); 
+        this.xPlanePositionSpinner.setModel(xSpinnerNumberModel);
+        
+        this.yPlanePositionSlider.setValue(defaultValue);
+        this.yPlanePositionSlider.setMinimum(minValue);
+        this.yPlanePositionSlider.setMaximum(maxValue);
+        this.yPlanePositionSlider.setMinorTickSpacing(INCREMENT);
+        
+        SpinnerNumberModel ySpinnerNumberModel = new SpinnerNumberModel(defaultValue, minValue, maxValue, INCREMENT);
+        this.yPlanePositionSpinner.setModel(ySpinnerNumberModel);
+        
+        this.zPlanePositionSlider.setValue(defaultValue);
+        this.zPlanePositionSlider.setMinimum(minValue);
+        this.zPlanePositionSlider.setMaximum(maxValue);
+        this.zPlanePositionSlider.setMinorTickSpacing(INCREMENT);
+        
+        SpinnerNumberModel zSpinnerNumberModel = new SpinnerNumberModel(defaultValue, minValue, maxValue, INCREMENT);
+        this.zPlanePositionSpinner.setModel(zSpinnerNumberModel);
+         
+    }
+    
+    private void addChangeListenersToRotationPanel(){
+        this.xPlaneRotationSlider.addChangeListener(new ChangeListener(){
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSlider source = (JSlider) e.getSource();
+                
+                int currValue = source.getValue();
+                GUI.this.xPlaneRotationSpinner.setValue(currValue);
+            }
+        });
+        
+        this.yPlaneRotationSlider.addChangeListener(new ChangeListener(){
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSlider source = (JSlider) e.getSource();
+                
+                int currValue = source.getValue();
+                GUI.this.yPlaneRotationSpinner.setValue(currValue);
+            }
+        });
+        
+        this.zPlaneRotationSlider.addChangeListener(new ChangeListener() {
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSlider source = (JSlider) e.getSource();
+                
+                int currValue = source.getValue();
+                GUI.this.zPlaneRotationSpinner.setValue(currValue);
+            }
+        });
+        
+        this.xPlaneRotationSpinner.addChangeListener(new ChangeListener() {
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSpinner source = (JSpinner) e.getSource();
+                
+                int currValue = (int) source.getValue();
+                GUI.this.xPlaneRotationSlider.setValue(currValue);
+            }
+        });
+        
+        this.yPlaneRotationSpinner.addChangeListener(new ChangeListener() {
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSpinner source = (JSpinner) e.getSource();
+                
+                int currValue = (int) source.getValue();
+                GUI.this.yPlaneRotationSlider.setValue(currValue);
+            }
+        });
+        
+        this.zPlaneRotationSpinner.addChangeListener(new ChangeListener() {
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSpinner source = (JSpinner) e.getSource();
+                
+                int currValue = (int) source.getValue();
+                GUI.this.zPlaneRotationSlider.setValue(currValue);
+            }
+        });
+    }
+    
+    private void addChangeListenersToSizePanel(){
+        this.xPlaneSizeSlider.addChangeListener(new ChangeListener(){
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSlider source = (JSlider) e.getSource();
+                
+                int currValue = source.getValue();
+                GUI.this.xPlaneSizeSpinner.setValue(currValue);
+                
+                if(GUI.this.currPlane instanceof SquaredPlane){
+                    SquaredPlane squaredPlane = (SquaredPlane) GUI.this.currPlane;
+                    squaredPlane.setWidth(currValue);
+                    GUI.this.currPlane = squaredPlane;
+                }
+                if(GUI.this.currPlane instanceof RectangularPlane){
+                    RectangularPlane rectangularPlane = (RectangularPlane) GUI.this.currPlane;
+                    rectangularPlane.setWidth(currValue);
+                    GUI.this.currPlane = rectangularPlane;
+                }
+            }
+        });
+        
+        this.yPlaneSizeSlider.addChangeListener(new ChangeListener(){
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSlider source = (JSlider) e.getSource();
+                
+                int currValue = source.getValue();
+                GUI.this.yPlaneSizeSpinner.setValue(currValue);
+                
+                if(GUI.this.currPlane instanceof RectangularPlane){
+                    RectangularPlane rectangularPlane = (RectangularPlane) GUI.this.currPlane;
+                    rectangularPlane.setLength(currValue);
+                    GUI.this.currPlane = rectangularPlane;
+                }
+            }
+        });
+        
+        this.rPlaneSizeSlider.addChangeListener(new ChangeListener() {
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSlider source = (JSlider) e.getSource();
+                
+                int currValue = source.getValue();
+                GUI.this.rPlaneSizeSpinner.setValue(currValue);
+                
+                if(GUI.this.currPlane instanceof CircularPlane){
+                    CircularPlane circularPlane = (CircularPlane) GUI.this.currPlane;
+                    circularPlane.setRadius(currValue);
+                    GUI.this.currPlane = circularPlane;
+                    GUI.this.renderer.setPlane(circularPlane);
+                }
+            }
+        });
+        
+        this.xPlaneSizeSpinner.addChangeListener(new ChangeListener() {
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSpinner source = (JSpinner) e.getSource();
+                
+                int currValue = (int) source.getValue();
+                GUI.this.xPlaneSizeSlider.setValue(currValue);
+            }
+        });
+        
+        this.yPlaneSizeSpinner.addChangeListener(new ChangeListener() {
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSpinner source = (JSpinner) e.getSource();
+                
+                int currValue = (int) source.getValue();
+                GUI.this.yPlaneSizeSlider.setValue(currValue);
+            }
+        });
+        
+        this.rPlaneSizeSpinner.addChangeListener(new ChangeListener() {
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSpinner source = (JSpinner) e.getSource();
+                
+                int currValue = (int) source.getValue();
+                GUI.this.rPlaneSizeSlider.setValue(currValue);
+            }
+        });
+    }
+    
+    private void addChangeListenersToPositionPanel(){
+        this.xPlanePositionSlider.addChangeListener(new ChangeListener(){
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSlider source = (JSlider) e.getSource();
+                
+                int currValue = source.getValue();
+                GUI.this.xPlanePositionSpinner.setValue(currValue);
+                
+                if(GUI.this.currPlane instanceof Plane){
+                    Point3f currCenter = GUI.this.currPlane.getCenterPoint();
+                    Point3f newCenter = new Point3f(currValue, currCenter.y, currCenter.z);
+                    GUI.this.currPlane.setCenterPoint(newCenter);
+                    GUI.this.renderer.setPlane(currPlane);
+                }
+            }
+        });
+        
+        this.yPlanePositionSlider.addChangeListener(new ChangeListener(){
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSlider source = (JSlider) e.getSource();
+                
+                int currValue = source.getValue();
+                GUI.this.yPlanePositionSpinner.setValue(currValue);
+                
+                if(GUI.this.currPlane instanceof Plane){
+                    Point3f currCenter = GUI.this.currPlane.getCenterPoint();
+                    Point3f newCenter = new Point3f(currCenter.x, currValue, currCenter.z);
+                    GUI.this.currPlane.setCenterPoint(newCenter);
+                    GUI.this.renderer.setPlane(currPlane);
+                }
+            }
+        });
+        
+        this.zPlanePositionSlider.addChangeListener(new ChangeListener() {
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSlider source = (JSlider) e.getSource();
+                
+                int currValue = source.getValue();
+                GUI.this.zPlanePositionSpinner.setValue(currValue);
+                
+                if(GUI.this.currPlane instanceof Plane){
+                    Point3f currCenter = GUI.this.currPlane.getCenterPoint();
+                    Point3f newCenter = new Point3f(currCenter.x, currCenter.y, currValue);
+                    GUI.this.currPlane.setCenterPoint(newCenter);
+                    GUI.this.renderer.setPlane(currPlane);
+                }
+            }
+        });
+        
+        this.xPlanePositionSpinner.addChangeListener(new ChangeListener() {
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSpinner source = (JSpinner) e.getSource();
+                
+                int currValue = (int) source.getValue();
+                GUI.this.xPlanePositionSlider.setValue(currValue);
+            }
+        });
+        
+        this.yPlanePositionSpinner.addChangeListener(new ChangeListener() {
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSpinner source = (JSpinner) e.getSource();
+                
+                int currValue = (int) source.getValue();
+                GUI.this.yPlanePositionSlider.setValue(currValue);
+            }
+        });
+        
+        this.zPlanePositionSpinner.addChangeListener(new ChangeListener() {
+
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSpinner source = (JSpinner) e.getSource();
+                
+                int currValue = (int) source.getValue();
+                GUI.this.zPlanePositionSlider.setValue(currValue);
+            }
+        });
+    }
+    
+    private void setCurrPlaneToCircle(){
+        CircularPlane newCurrPlane = this.transformPlaneToCircle(this.currPlane);
+        this.currPlane = newCurrPlane;
+        
+        this.rPlaneSizeLabel.setEnabled(true);
+        this.rPlaneSizeSlider.setEnabled(true);
+        this.rPlaneSizeSpinner.setEnabled(true);
+        
+        this.rPlaneSizeSlider.setValue((int) newCurrPlane.getRadius());
+        this.rPlaneSizeSpinner.setValue((int) newCurrPlane.getRadius());
+        
+        this.xPlaneSizeLabel.setEnabled(false);
+        this.xPlaneSizeSlider.setEnabled(false);
+        this.xPlaneSizeSpinner.setEnabled(false);
+        
+        this.yPlaneSizeLabel.setEnabled(false);
+        this.yPlaneSizeSpinner.setEnabled(false);
+        this.yPlaneSizeSlider.setEnabled(false);
+    }
+    
+    private void setCurrPlaneToSquare(){
+        SquaredPlane newCurrPlane = this.transformPlaneToSquare(this.currPlane);
+        this.currPlane = newCurrPlane;
+        
+        this.xPlaneSizeLabel.setEnabled(true);
+        this.xPlaneSizeSlider.setEnabled(true);
+        this.xPlaneSizeSpinner.setEnabled(true);
+        
+        this.xPlaneSizeSlider.setValue((int) newCurrPlane.getWidth());
+        this.xPlaneSizeSpinner.setValue((int) newCurrPlane.getWidth());
+        
+        this.yPlaneSizeLabel.setEnabled(false);
+        this.yPlaneSizeSlider.setEnabled(false);
+        this.yPlaneSizeSpinner.setEnabled(false);
+        
+        this.rPlaneSizeLabel.setEnabled(false);
+        this.rPlaneSizeSlider.setEnabled(false);
+        this.rPlaneSizeSpinner.setEnabled(false);     
+    }
+    
+    private void setToCurrPlaneToRectangle(){
+        RectangularPlane newCurrPlane = this.transformPlaneToRectangle(this.currPlane);
+        this.currPlane = newCurrPlane;
+        
+        this.xPlaneSizeLabel.setEnabled(true);
+        this.xPlaneSizeSlider.setEnabled(true);
+        this.xPlaneSizeSpinner.setEnabled(true);
+        
+        this.xPlaneSizeSlider.setValue((int) newCurrPlane.getWidth());
+        this.xPlaneSizeSpinner.setValue((int) newCurrPlane.getWidth());
+        
+        this.yPlaneSizeLabel.setEnabled(true);
+        this.yPlaneSizeSlider.setEnabled(true);
+        this.yPlaneSizeSpinner.setEnabled(true);
+        
+        this.yPlaneSizeSlider.setValue((int) newCurrPlane.getLength());
+        this.yPlaneSizeSpinner.setValue((int) newCurrPlane.getLength());
+        
+        this.rPlaneSizeLabel.setEnabled(false);
+        this.rPlaneSizeSlider.setEnabled(false);
+        this.rPlaneSizeSpinner.setEnabled(false);
+    }
+    
+    private CircularPlane transformPlaneToCircle(Plane plane){
+        if(plane instanceof SquaredPlane){
+            SquaredPlane squaredPlane = (SquaredPlane) plane;
+            float radius = squaredPlane.getWidth() / 2;
+            
+            return new CircularPlane(squaredPlane.getCenterPoint(), squaredPlane.getNormal(), radius);
+        }
+        if(plane instanceof RectangularPlane){
+            RectangularPlane rectangularPlane = (RectangularPlane) plane;
+            float radius = rectangularPlane.getWidth() / 2;
+            
+            return new CircularPlane(rectangularPlane.getCenterPoint(), rectangularPlane.getNormal(), radius);
+        }
+        return (CircularPlane) plane; 
+    }
+    
+    private SquaredPlane transformPlaneToSquare(Plane plane){
+        if(plane instanceof CircularPlane){
+            CircularPlane circularPlane = (CircularPlane) plane;
+            float width = circularPlane.getRadius() * 2;
+            
+            return new SquaredPlane(circularPlane.getCenterPoint(), circularPlane.getNormal(), width);
+        }
+        if(plane instanceof RectangularPlane){
+            RectangularPlane rectangularPlane = (RectangularPlane) plane;
+            float width = rectangularPlane.getWidth();
+            
+            return new SquaredPlane(rectangularPlane.getCenterPoint(), rectangularPlane.getNormal(), width);
+        }
+        return (SquaredPlane) plane;
+    }
+    
+    private RectangularPlane transformPlaneToRectangle(Plane plane){
+        if(plane instanceof CircularPlane){
+            CircularPlane circularPlane = (CircularPlane) plane;
+            float witdh = circularPlane.getRadius() * 2;
+            
+            return new RectangularPlane(circularPlane.getCenterPoint(), circularPlane.getNormal(), witdh, witdh);
+        }
+        if(plane instanceof SquaredPlane){
+            SquaredPlane squaredPlane = (SquaredPlane) plane;
+            float width = squaredPlane.getWidth();
+            
+            return new RectangularPlane(squaredPlane.getCenterPoint(), squaredPlane.getNormal(), width, width);
+        }
+        
+        return (RectangularPlane) plane;
+    }
+    
+    private void initPlane(float defaultSize){  
+        String selectedItem = (String) this.planeComboBox.getSelectedItem();
+        Point3f centerOfPlane = new Point3f(0.0f, 0.0f, 0.0f);
+        Vector3f vectorOfPlane = new Vector3f(0.0f, 1.0f, 0.0f);
+        
+        switch(selectedItem) {
+            case "Circle" :
+                this.currPlane = new CircularPlane(centerOfPlane, vectorOfPlane, defaultSize / 2);
+                this.setCurrPlaneToCircle();
+                return;
+            case "Square" :
+                this.currPlane = new SquaredPlane(centerOfPlane, vectorOfPlane, defaultSize);
+                this.setCurrPlaneToSquare();
+                return;
+            case "Rectangle" :
+                this.currPlane = new RectangularPlane(centerOfPlane, vectorOfPlane, defaultSize, defaultSize);
+                this.setToCurrPlaneToRectangle();    
+        }
     }
     
     public void refreshInformationPanel(Model model){
@@ -553,10 +1128,6 @@ public class GUI extends javax.swing.JFrame {
         modelNameLabel = new javax.swing.JLabel();
         planePanel = new javax.swing.JPanel();
         jTabbedPane2 = new javax.swing.JTabbedPane();
-        typeOfPlanePanel = new javax.swing.JPanel();
-        circleCheckBox = new javax.swing.JCheckBox();
-        sqareCheckBox = new javax.swing.JCheckBox();
-        rectangleCheckBox = new javax.swing.JCheckBox();
         positionOfPlanePanel = new javax.swing.JPanel();
         xPlanePositionSlider = new javax.swing.JSlider();
         yPlanePositionSlider = new javax.swing.JSlider();
@@ -580,13 +1151,15 @@ public class GUI extends javax.swing.JFrame {
         sizeOfPlanePanel = new javax.swing.JPanel();
         rPlaneSizeSlider = new javax.swing.JSlider();
         xPlaneSizeSlider = new javax.swing.JSlider();
-        zPlaneSizeSlider = new javax.swing.JSlider();
+        yPlaneSizeSlider = new javax.swing.JSlider();
         rPlaneSizeLabel = new javax.swing.JLabel();
         xPlaneSizeLabel = new javax.swing.JLabel();
-        zPlaneSizeLabel = new javax.swing.JLabel();
+        yPlaneSizeLabel = new javax.swing.JLabel();
         rPlaneSizeSpinner = new javax.swing.JSpinner();
         xPlaneSizeSpinner = new javax.swing.JSpinner();
         yPlaneSizeSpinner = new javax.swing.JSpinner();
+        selectPlaneLabel = new javax.swing.JLabel();
+        planeComboBox = new javax.swing.JComboBox();
         jTabbedPane1 = new javax.swing.JTabbedPane();
         openGlPanel = new javax.swing.JPanel();
         projection2DPanel = new javax.swing.JPanel();
@@ -772,66 +1345,44 @@ public class GUI extends javax.swing.JFrame {
 
         planePanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Plane settings"));
 
-        circleCheckBox.setText(" Circle");
-
-        sqareCheckBox.setText(" Square");
-
-        rectangleCheckBox.setText(" Rectangle");
-
-        javax.swing.GroupLayout typeOfPlanePanelLayout = new javax.swing.GroupLayout(typeOfPlanePanel);
-        typeOfPlanePanel.setLayout(typeOfPlanePanelLayout);
-        typeOfPlanePanelLayout.setHorizontalGroup(
-            typeOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(typeOfPlanePanelLayout.createSequentialGroup()
-                .addGap(77, 77, 77)
-                .addGroup(typeOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(rectangleCheckBox)
-                    .addComponent(sqareCheckBox)
-                    .addComponent(circleCheckBox))
-                .addContainerGap(117, Short.MAX_VALUE))
-        );
-        typeOfPlanePanelLayout.setVerticalGroup(
-            typeOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(typeOfPlanePanelLayout.createSequentialGroup()
-                .addGap(25, 25, 25)
-                .addComponent(circleCheckBox)
-                .addGap(18, 18, 18)
-                .addComponent(sqareCheckBox)
-                .addGap(18, 18, Short.MAX_VALUE)
-                .addComponent(rectangleCheckBox)
-                .addContainerGap(24, Short.MAX_VALUE))
-        );
-
-        jTabbedPane2.addTab("Type", typeOfPlanePanel);
-
         xPlanePositionSlider.setPreferredSize(new java.awt.Dimension(150, 20));
 
         yPlanePositionSlider.setPreferredSize(new java.awt.Dimension(150, 20));
 
         zPlanePositionSlider.setPreferredSize(new java.awt.Dimension(150, 20));
 
+        xPlanePositionLabel.setForeground(new java.awt.Color(224, 0, 0));
         xPlanePositionLabel.setText("X:");
         xPlanePositionLabel.setPreferredSize(new java.awt.Dimension(10, 20));
 
+        yPlanePositionLabel.setForeground(new java.awt.Color(0, 224, 0));
         yPlanePositionLabel.setText("Y:");
         yPlanePositionLabel.setMaximumSize(new java.awt.Dimension(10, 20));
         yPlanePositionLabel.setMinimumSize(new java.awt.Dimension(10, 20));
 
+        zPlanePositionLabel.setForeground(new java.awt.Color(0, 0, 224));
         zPlanePositionLabel.setText("Z:");
         zPlanePositionLabel.setMaximumSize(new java.awt.Dimension(10, 20));
         zPlanePositionLabel.setMinimumSize(new java.awt.Dimension(10, 20));
 
+        xPlanePositionSpinner.setMaximumSize(new java.awt.Dimension(45, 20));
         xPlanePositionSpinner.setMinimumSize(new java.awt.Dimension(45, 20));
         xPlanePositionSpinner.setPreferredSize(new java.awt.Dimension(45, 20));
 
-        yPlanePositionSpinner.setPreferredSize(new java.awt.Dimension(30, 20));
+        yPlanePositionSpinner.setMaximumSize(new java.awt.Dimension(45, 20));
+        yPlanePositionSpinner.setMinimumSize(new java.awt.Dimension(45, 20));
+        yPlanePositionSpinner.setPreferredSize(new java.awt.Dimension(45, 20));
+
+        zPlanePositionSpinner.setMaximumSize(new java.awt.Dimension(45, 20));
+        zPlanePositionSpinner.setMinimumSize(new java.awt.Dimension(45, 20));
+        zPlanePositionSpinner.setPreferredSize(new java.awt.Dimension(45, 20));
 
         javax.swing.GroupLayout positionOfPlanePanelLayout = new javax.swing.GroupLayout(positionOfPlanePanel);
         positionOfPlanePanel.setLayout(positionOfPlanePanelLayout);
         positionOfPlanePanelLayout.setHorizontalGroup(
             positionOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(positionOfPlanePanelLayout.createSequentialGroup()
-                .addContainerGap(37, Short.MAX_VALUE)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, positionOfPlanePanelLayout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(positionOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, positionOfPlanePanelLayout.createSequentialGroup()
                         .addComponent(xPlanePositionLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -847,15 +1398,15 @@ public class GUI extends javax.swing.JFrame {
                         .addComponent(zPlanePositionSlider, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addGap(6, 6, 6)
                 .addGroup(positionOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(zPlanePositionSpinner)
-                    .addComponent(yPlanePositionSpinner, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(xPlanePositionSpinner, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap())
+                    .addComponent(zPlanePositionSpinner, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(yPlanePositionSpinner, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(xPlanePositionSpinner, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(20, 20, 20))
         );
         positionOfPlanePanelLayout.setVerticalGroup(
             positionOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(positionOfPlanePanelLayout.createSequentialGroup()
-                .addGap(30, 30, 30)
+                .addGap(20, 20, 20)
                 .addGroup(positionOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(xPlanePositionLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(xPlanePositionSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -870,7 +1421,7 @@ public class GUI extends javax.swing.JFrame {
                     .addComponent(zPlanePositionSlider, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(zPlanePositionSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(zPlanePositionLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(31, Short.MAX_VALUE))
+                .addContainerGap(16, Short.MAX_VALUE))
         );
 
         jTabbedPane2.addTab("Position", positionOfPlanePanel);
@@ -908,8 +1459,8 @@ public class GUI extends javax.swing.JFrame {
         rotationOfPlanePanel.setLayout(rotationOfPlanePanelLayout);
         rotationOfPlanePanelLayout.setHorizontalGroup(
             rotationOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, rotationOfPlanePanelLayout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addGroup(rotationOfPlanePanelLayout.createSequentialGroup()
+                .addContainerGap()
                 .addGroup(rotationOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(yPlaneRotationLabel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(zPlaneRotationLabel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -924,19 +1475,19 @@ public class GUI extends javax.swing.JFrame {
                 .addGroup(rotationOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(yPlaneRotationSpinner, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(zPlaneRotationSpinner, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(xPlaneRotationSpinner, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap())
+                    .addComponent(xPlaneRotationSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(20, Short.MAX_VALUE))
         );
         rotationOfPlanePanelLayout.setVerticalGroup(
             rotationOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(rotationOfPlanePanelLayout.createSequentialGroup()
-                .addGap(30, 30, 30)
+                .addGap(20, 20, 20)
                 .addGroup(rotationOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(rotationOfPlanePanelLayout.createSequentialGroup()
                         .addGroup(rotationOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                             .addComponent(xPlaneRotationLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(xPlaneRotationSlider, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(xPlaneRotationSpinner, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                            .addComponent(xPlaneRotationSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addGap(18, 18, 18)
                         .addGroup(rotationOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                             .addComponent(yPlaneRotationSlider, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -947,7 +1498,7 @@ public class GUI extends javax.swing.JFrame {
                     .addComponent(zPlaneRotationSlider, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(zPlaneRotationLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(zPlaneRotationSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(31, Short.MAX_VALUE))
+                .addContainerGap(16, Short.MAX_VALUE))
         );
 
         jTabbedPane2.addTab("Rotation", rotationOfPlanePanel);
@@ -957,14 +1508,14 @@ public class GUI extends javax.swing.JFrame {
 
         xPlaneSizeSlider.setPreferredSize(new java.awt.Dimension(150, 20));
 
-        zPlaneSizeSlider.setPreferredSize(new java.awt.Dimension(150, 20));
+        yPlaneSizeSlider.setPreferredSize(new java.awt.Dimension(150, 20));
 
         rPlaneSizeLabel.setText("r:");
         rPlaneSizeLabel.setPreferredSize(new java.awt.Dimension(10, 20));
 
         xPlaneSizeLabel.setText("x:");
 
-        zPlaneSizeLabel.setText("y:");
+        yPlaneSizeLabel.setText("y:");
 
         rPlaneSizeSpinner.setMinimumSize(new java.awt.Dimension(45, 20));
         rPlaneSizeSpinner.setPreferredSize(new java.awt.Dimension(45, 20));
@@ -973,29 +1524,29 @@ public class GUI extends javax.swing.JFrame {
         sizeOfPlanePanel.setLayout(sizeOfPlanePanelLayout);
         sizeOfPlanePanelLayout.setHorizontalGroup(
             sizeOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(sizeOfPlanePanelLayout.createSequentialGroup()
-                .addContainerGap(37, Short.MAX_VALUE)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, sizeOfPlanePanelLayout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(sizeOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(xPlaneSizeLabel, javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(zPlaneSizeLabel, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(yPlaneSizeLabel, javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(rPlaneSizeLabel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(sizeOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(rPlaneSizeSlider, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(sizeOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                        .addComponent(zPlaneSizeSlider, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(yPlaneSizeSlider, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(xPlaneSizeSlider, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(sizeOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(yPlaneSizeSpinner)
                     .addComponent(xPlaneSizeSpinner)
-                    .addComponent(rPlaneSizeSpinner, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap())
+                    .addComponent(rPlaneSizeSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(20, 20, 20))
         );
         sizeOfPlanePanelLayout.setVerticalGroup(
             sizeOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(sizeOfPlanePanelLayout.createSequentialGroup()
-                .addGap(30, 30, 30)
+                .addGap(20, 20, 20)
                 .addGroup(sizeOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(rPlaneSizeSlider, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(rPlaneSizeSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -1007,25 +1558,39 @@ public class GUI extends javax.swing.JFrame {
                     .addComponent(xPlaneSizeLabel))
                 .addGap(18, 18, 18)
                 .addGroup(sizeOfPlanePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(zPlaneSizeSlider, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(yPlaneSizeSlider, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(yPlaneSizeSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(zPlaneSizeLabel))
-                .addContainerGap(31, Short.MAX_VALUE))
+                    .addComponent(yPlaneSizeLabel))
+                .addContainerGap(16, Short.MAX_VALUE))
         );
 
         jTabbedPane2.addTab("Size", sizeOfPlanePanel);
+
+        selectPlaneLabel.setText("Select a plane type:");
+
+        planeComboBox.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "Circle", "Square", "Rectangle" }));
 
         javax.swing.GroupLayout planePanelLayout = new javax.swing.GroupLayout(planePanel);
         planePanel.setLayout(planePanelLayout);
         planePanelLayout.setHorizontalGroup(
             planePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(jTabbedPane2)
+            .addGroup(planePanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(selectPlaneLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(planeComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         planePanelLayout.setVerticalGroup(
             planePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(planePanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jTabbedPane2))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, planePanelLayout.createSequentialGroup()
+                .addGap(0, 8, Short.MAX_VALUE)
+                .addGroup(planePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(selectPlaneLabel)
+                    .addComponent(planeComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jTabbedPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE))
         );
 
         javax.swing.GroupLayout leftPanelLayout = new javax.swing.GroupLayout(leftPanel);
@@ -1154,15 +1719,27 @@ public class GUI extends javax.swing.JFrame {
         Set<Long> intersectionTriangles = new HashSet<>();
         List<List<Long>> allParts;
         
-        Plane plane = new CircularPlane(planeCenter /*new Point3f(0,0,0)*/, /*new Vector3f(0,1,0)*/ new Vector3f(-1,1,0), 500);
+        float planeX = this.currPlane.getCenterPoint().x;
+        float planeY = this.currPlane.getCenterPoint().y;
+        float planeZ = this.currPlane.getCenterPoint().z;
+        Point3f realCenterPlane = new Point3f(planeX, planeY, planeZ);
+        
+        float transformPlaneX = planeX + this.currCenterOfModels.x;
+        float transformPlaneY = planeY + this.currCenterOfModels.y;
+        float transformPlaneZ = planeZ + this.currCenterOfModels.z;
+        Point3f transformPlaneCenter = new Point3f(transformPlaneX, transformPlaneY, transformPlaneZ);
+        
+        this.currPlane.setCenterPoint(transformPlaneCenter);
+        
+        //Plane plane = new CircularPlane(planeCenter /*new Point3f(0,0,0)*/, /*new Vector3f(0,1,0)*/ /*new Vector3f(-1,1,0)*/ new Vector3f(0,0,1), 500/*11*/);
         //Plane plane = new CircularPlane(/*planeCenter*/ new Point3f(0,0,0), /*new Point3f(0,1,0)*/ new Point3f(0,-1,0) /*new Point3f(1,-1,0)*/ /*new Point3f(-1,1,0)*/ , 500);
         //app.setComponent(modelWithMap);
-        intersectionTriangles.addAll(app.getAllIntersectionTriangles(newModel, plane));
-        app.divideIntersectingTriangles(intersectionTriangles, newModel, plane);
+        intersectionTriangles.addAll(app.getAllIntersectionTriangles(newModel, this.currPlane));
+        app.divideIntersectingTriangles(intersectionTriangles, newModel, this.currPlane);
         //app.divideModel(modelWithMap, plane);
         //app.setComponent(newModel);
-        List<HalfEdgeStructure> allPolygons = app.findBoundaryPoplygonsFromCut(newModel, plane);
-        List<Model> dividedModels = app.divideModel(newModel, allPolygons, plane);
+        List<HalfEdgeStructure> allPolygons = app.findBoundaryPoplygonsFromCut(newModel, this.currPlane);
+        List<Model> dividedModels = app.divideModel(newModel, allPolygons, this.currPlane);
         tableModel.addModels3d(dividedModels);
         //app.findBoundaryPolygons(newModel, plane);
         //allParts = app.getListsOfParts(intersectionTriangles, modelWithMap);
@@ -1183,7 +1760,8 @@ public class GUI extends javax.swing.JFrame {
         System.out.println("kliknutie" + ringList.toString() + "velkost kolekcie" + ringList.size());
         
         //renderer.setRingList(ringList);
-        renderer.setPlane(plane);
+        this.currPlane.setCenterPoint(realCenterPlane);
+        renderer.setPlane(this.currPlane);
     }//GEN-LAST:event_cutButtonActionPerformed
 
     private void jTableModelsMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTableModelsMouseClicked
@@ -1276,7 +1854,6 @@ public class GUI extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel ListOfModelsPanel;
-    private javax.swing.JCheckBox circleCheckBox;
     private javax.swing.JButton cutButton;
     private javax.swing.JMenu edit;
     private javax.swing.JMenu file;
@@ -1297,6 +1874,7 @@ public class GUI extends javax.swing.JFrame {
     private javax.swing.JLabel modelNameLabel;
     private javax.swing.JLabel nameLabel;
     private javax.swing.JPanel openGlPanel;
+    private javax.swing.JComboBox planeComboBox;
     private javax.swing.JPanel planePanel;
     private javax.swing.JLabel pointLabel;
     private javax.swing.JLabel pointsCountLabel;
@@ -1305,16 +1883,14 @@ public class GUI extends javax.swing.JFrame {
     private javax.swing.JLabel rPlaneSizeLabel;
     private javax.swing.JSlider rPlaneSizeSlider;
     private javax.swing.JSpinner rPlaneSizeSpinner;
-    private javax.swing.JCheckBox rectangleCheckBox;
     private javax.swing.JPanel rotationOfPlanePanel;
+    private javax.swing.JLabel selectPlaneLabel;
     private javax.swing.JPanel sizeOfPlanePanel;
-    private javax.swing.JCheckBox sqareCheckBox;
     private javax.swing.JLabel statusLabel;
     private javax.swing.JPanel statusPanel;
     private javax.swing.JToolBar toolBar;
     private javax.swing.JLabel trianglesCountLabel;
     private javax.swing.JLabel trianglesLabel;
-    private javax.swing.JPanel typeOfPlanePanel;
     private javax.swing.JLabel widthLabel;
     private javax.swing.JLabel widthValueLabel;
     private javax.swing.JLabel xPlanePositionLabel;
@@ -1332,6 +1908,8 @@ public class GUI extends javax.swing.JFrame {
     private javax.swing.JLabel yPlaneRotationLabel;
     private javax.swing.JSlider yPlaneRotationSlider;
     private javax.swing.JSpinner yPlaneRotationSpinner;
+    private javax.swing.JLabel yPlaneSizeLabel;
+    private javax.swing.JSlider yPlaneSizeSlider;
     private javax.swing.JSpinner yPlaneSizeSpinner;
     private javax.swing.JLabel zPlanePositionLabel;
     private javax.swing.JSlider zPlanePositionSlider;
@@ -1339,7 +1917,5 @@ public class GUI extends javax.swing.JFrame {
     private javax.swing.JLabel zPlaneRotationLabel;
     private javax.swing.JSlider zPlaneRotationSlider;
     private javax.swing.JSpinner zPlaneRotationSpinner;
-    private javax.swing.JLabel zPlaneSizeLabel;
-    private javax.swing.JSlider zPlaneSizeSlider;
     // End of variables declaration//GEN-END:variables
 }

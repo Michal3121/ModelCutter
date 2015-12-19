@@ -20,6 +20,10 @@ public interface Plane {
     
     public Point2f getCenteredProjectionPoint(Point3f point3D);
     
+    public void setCenterPoint(Point3f centerPoint);
+    
+    public void setNormal(Vector3f normal);
+    
     public boolean isIntersecting(Point3f coord1, Point3f coord2);
     
     public boolean isPointUnderPlane(Point3f coord);

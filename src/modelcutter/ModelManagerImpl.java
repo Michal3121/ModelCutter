@@ -15,6 +15,7 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -213,6 +214,44 @@ public class ModelManagerImpl implements ModelManager {
         }
         
         return maxID;
+    }
+    
+    public Point3f findCenterOfModels(List<Model> allModels){ 
+        List<Double> xDimensions = new ArrayList<>();
+        List<Double> yDimensions = new ArrayList<>();
+        List<Double> zDimensions = new ArrayList<>();
+        
+        for(Model currModel : allModels){
+            xDimensions.add(currModel.getSizeXmin());
+            xDimensions.add(currModel.getSizeXmax());
+            
+            yDimensions.add(currModel.getSizeYmin());
+            yDimensions.add(currModel.getSizeYmax());
+            
+            zDimensions.add(currModel.getSizeZmin());
+            zDimensions.add(currModel.getSizeZmax());
+        }
+        
+        double sizeXmin = Collections.min(xDimensions);
+        double sizeXmax = Collections.max(xDimensions);
+        double sizeYmin = Collections.min(yDimensions);
+        double sizeYmax = Collections.max(yDimensions);
+        double sizeZmin = Collections.min(zDimensions);
+        double sizeZmax = Collections.max(zDimensions);
+        
+        return new Point3f((float) (sizeXmax + sizeXmin) / 2,
+                           (float) (sizeYmax + sizeYmin) / 2, 
+                           (float) (sizeZmax + sizeZmin) / 2);
+    }
+    
+    public double findLargestDimension(Model model){
+        List<Double> dimensions = new ArrayList<>();
+        
+        dimensions.add(model.getSizeX());
+        dimensions.add(model.getSizeY());
+        dimensions.add(model.getSizeZ());
+        
+        return Collections.max(dimensions);
     }
     
     private String modelName(File path){

@@ -20,6 +20,7 @@ import static javax.media.opengl.GL.GL_DEPTH_TEST;
 import static javax.media.opengl.GL.GL_LINES;
 import static javax.media.opengl.GL.GL_NICEST;
 import static javax.media.opengl.GL.GL_TRIANGLES;
+import static javax.media.opengl.GL.GL_TRIANGLE_FAN;
 import static javax.media.opengl.GL.GL_TRIANGLE_STRIP;
 import javax.media.opengl.GL2;
 import static javax.media.opengl.GL2.GL_COMPILE;
@@ -34,6 +35,7 @@ import static javax.media.opengl.fixedfunc.GLLightingFunc.GL_SMOOTH;
 import static javax.media.opengl.fixedfunc.GLMatrixFunc.GL_MODELVIEW;
 import static javax.media.opengl.fixedfunc.GLMatrixFunc.GL_PROJECTION;
 import javax.media.opengl.glu.GLU;
+import javax.media.opengl.glu.GLUquadric;
 import javax.vecmath.Point3f;
 import javax.vecmath.Vector2d;
 import javax.vecmath.Vector3d;
@@ -236,14 +238,15 @@ public class Renderer  implements GLEventListener {
                 
             gl.glTranslated(- translatedX, - translatedY,  - translatedZ);
             this.drawModel(model, gl);
-            this.drawSquarePlane(this.getPlane(), 100, gl);
+            //this.drawSquarePlane(this.getPlane(), 100, gl);
             
             gl.glEndList();
         }
         
         if(this.listOfModels != null && !listOfModels.isEmpty()) // POZOR vyhodnocovanie zlava
         {
-            Point3f centerOfModels = this.findCenterOfModels(listOfModels);
+            ModelManagerImpl modelManager = new ModelManagerImpl();
+            Point3f centerOfModels = modelManager.findCenterOfModels(listOfModels);
             
             for(int i = 0; i < listOfModels.size(); i++){
                 gl.glNewList(i + 1,GL_COMPILE);
@@ -255,13 +258,7 @@ public class Renderer  implements GLEventListener {
                 
                 gl.glEndList();
             }
-            //this.drawSquarePlane(this.getPlane(), 100, gl);      
         }
-        
-        /*gl.glNewList(0, GL_COMPILE);
-        drawFloor(50,gl);
-        gl.glEndList();*/
-        
     }
 
     @Override
@@ -323,7 +320,7 @@ public class Renderer  implements GLEventListener {
         gl.glTranslatef((float) this.currTranslateX/15.0f, 0.0f, 0.0f); // translacia mysou 
         gl.glTranslatef(0.0f, (float) - this.currTranslateY/15, 0.0f);*/
         
-        this.drawAxes(gl); // otacanie spolu s objektom
+        this.drawAxes(15.0f, gl); // otacanie spolu s objektom
         
         // vykreslenie aktualneho modelu
         if(this.listOfModels != null && !listOfModels.isEmpty()){
@@ -347,6 +344,37 @@ public class Renderer  implements GLEventListener {
                 }
             }
         }
+        
+        // vykreslenie roviny
+        if(this.plane != null){
+            Color planeColor = Color.LIGHT_GRAY;
+            gl.glColor3ub((byte) planeColor.getRed(), (byte) planeColor.getGreen(), (byte) planeColor.getBlue());
+            
+            gl.glPushMatrix();
+            Point3f center = this.plane.getCenterPoint();
+            gl.glTranslatef(center.x, center.y, center.z);
+            
+            this.drawPlane(plane, gl);
+            if(this.plane instanceof CircularPlane){
+                CircularPlane circularPlane = (CircularPlane) this.plane;
+                float radius = circularPlane.getRadius();
+                this.drawAxes(radius * 1.25f, gl);
+            }
+            if(this.plane instanceof SquaredPlane){
+                SquaredPlane squaredPlane = (SquaredPlane) this.plane;
+                float width = squaredPlane.getWidth();
+                this.drawAxes(width / 2 * 1.25f, gl);
+            }
+            if(this.plane instanceof RectangularPlane){
+                RectangularPlane rectangularPlane = (RectangularPlane) this.plane;
+                float width = rectangularPlane.getWidth();
+                this.drawAxes(width / 2 * 1.25f, gl);
+            }
+            
+            gl.glPopMatrix();
+        }
+        
+        
         //this.drawRing(gl);
         
         gl.glColor3f(1.0f, 1.0f, 1.0f);
@@ -403,19 +431,47 @@ public class Renderer  implements GLEventListener {
          */
     }
     
-    private void drawAxes(GL2 gl){
+    private void drawAxes(float length, GL2 gl){
         gl.glLineWidth(2.5f); 
+        
         gl.glBegin(GL_LINES);
-        gl.glColor3f(1.0f, 0.0f, 0.0f); // X axe
-        gl.glVertex3f(0.0f, 0.0f, 0.0f);
-        gl.glVertex3f(15, 0, 0);
-        gl.glColor3f(0.0f, 1.0f, 0.0f); // Y axe
-        gl.glVertex3f(0.0f, 0.0f, 0.0f);
-        gl.glVertex3f(0, 15, 0);
-        gl.glColor3f(0.0f, 0.0f, 1.0f); // Z axe
-        gl.glVertex3f(0.0f, 0.0f, 0.0f);
-        gl.glVertex3f(0, 0, 15);
+            gl.glColor3f(1.0f, 0.0f, 0.0f); // X axe
+            gl.glVertex3f(0.0f, 0.0f, 0.0f);
+            gl.glVertex3f(length, 0, 0);
+            
+            gl.glColor3f(0.0f, 1.0f, 0.0f); // Y axe
+            gl.glVertex3f(0.0f, 0.0f, 0.0f);
+            gl.glVertex3f(0, length, 0);
+            
+            gl.glColor3f(0.0f, 0.0f, 1.0f); // Z axe
+            gl.glVertex3f(0.0f, 0.0f, 0.0f);
+            gl.glVertex3f(0, 0, length);            
         gl.glEnd();
+        
+        GLUquadric gluquad = glu.gluNewQuadric();
+        // X cone
+        gl.glPushMatrix();
+        gl.glTranslatef(length, 0, 0);
+        gl.glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
+        gl.glColor3f(1.0f, 0.0f, 0.0f);
+        glu.gluCylinder(gluquad, 0.5f, 0.0f, 0.1f * length, 150, 1);
+        gl.glPopMatrix();
+        
+        // Y cone 
+        gl.glPushMatrix();
+        gl.glTranslatef(0, length, 0);
+        gl.glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
+        gl.glColor3f(0.0f, 1.0f, 0.0f);
+        glu.gluCylinder(gluquad, 0.5f, 0.0f, 0.1f * length, 150, 1);
+        gl.glPopMatrix();
+        
+        // Z cone
+        gl.glPushMatrix();
+        gl.glTranslatef(0, 0, length);
+        gl.glColor3f(0.0f, 0.0f, 1.0f);
+        glu.gluCylinder(gluquad, 0.5f, 0.0f, 0.1f * length, 150, 1);
+        gl.glPopMatrix();
+            
     }
     
     private void drawRing(GL2 gl){
@@ -502,6 +558,77 @@ public class Renderer  implements GLEventListener {
         return new Vector3d(vector2d.x, vector2d.y, z);
     }
     
+    public void drawPlane(Plane plane, GL2 gl){
+        if(plane instanceof CircularPlane){
+            CircularPlane circularPlane = (CircularPlane) plane;
+            this.drawCircularPlane(circularPlane, gl);
+        }
+        if(plane instanceof SquaredPlane){
+            SquaredPlane squaredPlane = (SquaredPlane) plane;
+            this.drawSquaredPlane(squaredPlane, gl);
+        }
+        if(plane instanceof RectangularPlane){
+            RectangularPlane rectangularPlane = (RectangularPlane) plane;
+            this.drawRectangularPlane(rectangularPlane, gl);
+        }
+    }
+    
+    private void drawCircularPlane(CircularPlane circularPlane, GL2 gl){
+        float radius = circularPlane.getRadius();
+        int numberOfTriangles = 80;
+        float twoPi = 2 * (float) Math.PI;
+        float delta = twoPi / numberOfTriangles;
+        
+        gl.glBegin(GL_TRIANGLE_FAN);
+            gl.glVertex3f(0.0f, 0.0f, 0.0f); // center
+            for(int i = 0; i <= numberOfTriangles; i++){
+                float x = radius * (float) Math.cos(i * delta);
+                float z = radius * (float) Math.sin(i * delta);
+                gl.glVertex3f(x, 0.0f, z);
+            }
+        gl.glEnd();
+    }
+    
+    private void drawSquaredPlane(SquaredPlane squaredPlane, GL2 gl){
+        int width = (int) squaredPlane.getWidth();
+        float startValue = - width /2.0f; 
+        
+        for(int xCounter = 0; xCounter < width; xCounter++){
+            for(int yCounter = 0; yCounter < width; yCounter++){
+                float x = startValue + xCounter;
+                float y = startValue + yCounter;
+                
+                gl.glBegin(GL_TRIANGLE_STRIP);
+                    gl.glVertex3f(x, 0, y);
+                    gl.glVertex3f(x, 0, y+1);
+                    gl.glVertex3f(x+1, 0, y);
+                    gl.glVertex3f(x+1,0,y+1);
+                gl.glEnd();
+            }
+        }
+    }
+    
+    private void drawRectangularPlane(RectangularPlane rectangularPlane, GL2 gl){
+        int width = (int) rectangularPlane.getWidth();
+        int length = (int) rectangularPlane.getLength();
+        float startX = - width / 2.0f;
+        float startY = - length /2.0f;
+        
+        for(int xCounter = 0; xCounter < width; xCounter++){
+            for(int yCounter = 0; yCounter < length; yCounter++){
+                float x = startX + xCounter;
+                float y = startY + yCounter; 
+                
+                gl.glBegin(GL_TRIANGLE_STRIP);
+                    gl.glVertex3f(x, 0, y);
+                    gl.glVertex3f(x, 0, y+1);
+                    gl.glVertex3f(x+1, 0, y);
+                    gl.glVertex3f(x+1,0,y+1);
+                gl.glEnd();
+            }
+        }
+    }
+    
     public void drawFloor(int size, GL2 gl){
         
         
@@ -541,20 +668,6 @@ public class Renderer  implements GLEventListener {
                 gl.glEnd();     
             }
         }   
-    }
-    
-    private Point3f findCenterOfModels(List<Model> allModels){
-        float sizeXmax = 0;
-        float sizeYmax = 0;
-        float sizeZmax = 0;
-        
-        for(Model currModel : allModels){
-            sizeXmax += (float) currModel.getModelCenter().x;
-            sizeYmax += (float) currModel.getModelCenter().y;
-            sizeZmax += (float) currModel.getModelCenter().z;
-        }
-        
-        return new Point3f(sizeXmax / allModels.size(), sizeYmax / allModels.size(), sizeZmax / allModels.size());
     }
     
     private Color increaseSaturation(Color currColor, float magnitudeOfChange){

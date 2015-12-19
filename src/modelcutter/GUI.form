@@ -399,13 +399,25 @@
             <DimensionLayout dim="0">
               <Group type="103" groupAlignment="0" attributes="0">
                   <Component id="jTabbedPane2" alignment="0" max="32767" attributes="0"/>
+                  <Group type="102" alignment="0" attributes="0">
+                      <EmptySpace max="-2" attributes="0"/>
+                      <Component id="selectPlaneLabel" min="-2" max="-2" attributes="0"/>
+                      <EmptySpace type="unrelated" max="-2" attributes="0"/>
+                      <Component id="planeComboBox" min="-2" max="-2" attributes="0"/>
+                      <EmptySpace max="32767" attributes="0"/>
+                  </Group>
               </Group>
             </DimensionLayout>
             <DimensionLayout dim="1">
               <Group type="103" groupAlignment="0" attributes="0">
-                  <Group type="102" alignment="0" attributes="0">
-                      <EmptySpace max="-2" attributes="0"/>
-                      <Component id="jTabbedPane2" max="32767" attributes="0"/>
+                  <Group type="102" alignment="1" attributes="0">
+                      <EmptySpace min="0" pref="8" max="32767" attributes="0"/>
+                      <Group type="103" groupAlignment="3" attributes="0">
+                          <Component id="selectPlaneLabel" alignment="3" min="-2" max="-2" attributes="0"/>
+                          <Component id="planeComboBox" alignment="3" min="-2" max="-2" attributes="0"/>
+                      </Group>
+                      <EmptySpace type="unrelated" max="-2" attributes="0"/>
+                      <Component id="jTabbedPane2" min="-2" pref="160" max="-2" attributes="0"/>
                   </Group>
               </Group>
             </DimensionLayout>
@@ -415,61 +427,6 @@
 
               <Layout class="org.netbeans.modules.form.compat2.layouts.support.JTabbedPaneSupportLayout"/>
               <SubComponents>
-                <Container class="javax.swing.JPanel" name="typeOfPlanePanel">
-                  <Constraints>
-                    <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.support.JTabbedPaneSupportLayout" value="org.netbeans.modules.form.compat2.layouts.support.JTabbedPaneSupportLayout$JTabbedPaneConstraintsDescription">
-                      <JTabbedPaneConstraints tabName="Type">
-                        <Property name="tabTitle" type="java.lang.String" value="Type"/>
-                      </JTabbedPaneConstraints>
-                    </Constraint>
-                  </Constraints>
-
-                  <Layout>
-                    <DimensionLayout dim="0">
-                      <Group type="103" groupAlignment="0" attributes="0">
-                          <Group type="102" alignment="0" attributes="0">
-                              <EmptySpace min="-2" pref="77" max="-2" attributes="0"/>
-                              <Group type="103" groupAlignment="0" attributes="0">
-                                  <Component id="rectangleCheckBox" min="-2" max="-2" attributes="0"/>
-                                  <Component id="sqareCheckBox" min="-2" max="-2" attributes="0"/>
-                                  <Component id="circleCheckBox" min="-2" max="-2" attributes="0"/>
-                              </Group>
-                              <EmptySpace pref="117" max="32767" attributes="0"/>
-                          </Group>
-                      </Group>
-                    </DimensionLayout>
-                    <DimensionLayout dim="1">
-                      <Group type="103" groupAlignment="0" attributes="0">
-                          <Group type="102" alignment="0" attributes="0">
-                              <EmptySpace min="-2" pref="25" max="-2" attributes="0"/>
-                              <Component id="circleCheckBox" min="-2" max="-2" attributes="0"/>
-                              <EmptySpace type="separate" max="-2" attributes="0"/>
-                              <Component id="sqareCheckBox" min="-2" max="-2" attributes="0"/>
-                              <EmptySpace type="separate" max="32767" attributes="0"/>
-                              <Component id="rectangleCheckBox" min="-2" max="-2" attributes="0"/>
-                              <EmptySpace pref="24" max="32767" attributes="0"/>
-                          </Group>
-                      </Group>
-                    </DimensionLayout>
-                  </Layout>
-                  <SubComponents>
-                    <Component class="javax.swing.JCheckBox" name="circleCheckBox">
-                      <Properties>
-                        <Property name="text" type="java.lang.String" value=" Circle"/>
-                      </Properties>
-                    </Component>
-                    <Component class="javax.swing.JCheckBox" name="sqareCheckBox">
-                      <Properties>
-                        <Property name="text" type="java.lang.String" value=" Square"/>
-                      </Properties>
-                    </Component>
-                    <Component class="javax.swing.JCheckBox" name="rectangleCheckBox">
-                      <Properties>
-                        <Property name="text" type="java.lang.String" value=" Rectangle"/>
-                      </Properties>
-                    </Component>
-                  </SubComponents>
-                </Container>
                 <Container class="javax.swing.JPanel" name="positionOfPlanePanel">
                   <Constraints>
                     <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.support.JTabbedPaneSupportLayout" value="org.netbeans.modules.form.compat2.layouts.support.JTabbedPaneSupportLayout$JTabbedPaneConstraintsDescription">
@@ -482,8 +439,8 @@
                   <Layout>
                     <DimensionLayout dim="0">
                       <Group type="103" groupAlignment="0" attributes="0">
-                          <Group type="102" attributes="0">
-                              <EmptySpace pref="37" max="32767" attributes="0"/>
+                          <Group type="102" alignment="1" attributes="0">
+                              <EmptySpace max="32767" attributes="0"/>
                               <Group type="103" groupAlignment="0" attributes="0">
                                   <Group type="102" alignment="1" attributes="0">
                                       <Component id="xPlanePositionLabel" min="-2" max="-2" attributes="0"/>
@@ -504,17 +461,17 @@
                               <EmptySpace min="6" pref="6" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="0" max="-2" attributes="0">
                                   <Component id="zPlanePositionSpinner" max="32767" attributes="0"/>
-                                  <Component id="yPlanePositionSpinner" max="32767" attributes="0"/>
-                                  <Component id="xPlanePositionSpinner" alignment="1" max="32767" attributes="0"/>
+                                  <Component id="yPlanePositionSpinner" max="-2" attributes="0"/>
+                                  <Component id="xPlanePositionSpinner" alignment="1" min="-2" max="-2" attributes="0"/>
                               </Group>
-                              <EmptySpace max="-2" attributes="0"/>
+                              <EmptySpace min="-2" pref="20" max="-2" attributes="0"/>
                           </Group>
                       </Group>
                     </DimensionLayout>
                     <DimensionLayout dim="1">
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Group type="102" alignment="0" attributes="0">
-                              <EmptySpace min="-2" pref="30" max="-2" attributes="0"/>
+                              <EmptySpace min="-2" pref="20" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="0" attributes="0">
                                   <Component id="xPlanePositionLabel" min="-2" max="-2" attributes="0"/>
                                   <Component id="xPlanePositionSpinner" min="-2" max="-2" attributes="0"/>
@@ -532,7 +489,7 @@
                                   <Component id="zPlanePositionSpinner" min="-2" max="-2" attributes="0"/>
                                   <Component id="zPlanePositionLabel" min="-2" max="-2" attributes="0"/>
                               </Group>
-                              <EmptySpace pref="31" max="32767" attributes="0"/>
+                              <EmptySpace pref="16" max="32767" attributes="0"/>
                           </Group>
                       </Group>
                     </DimensionLayout>
@@ -561,6 +518,9 @@
                     </Component>
                     <Component class="javax.swing.JLabel" name="xPlanePositionLabel">
                       <Properties>
+                        <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
+                          <Color blue="0" green="0" red="e0" type="rgb"/>
+                        </Property>
                         <Property name="text" type="java.lang.String" value="X:"/>
                         <Property name="preferredSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
                           <Dimension value="[10, 20]"/>
@@ -569,6 +529,9 @@
                     </Component>
                     <Component class="javax.swing.JLabel" name="yPlanePositionLabel">
                       <Properties>
+                        <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
+                          <Color blue="0" green="e0" red="0" type="rgb"/>
+                        </Property>
                         <Property name="text" type="java.lang.String" value="Y:"/>
                         <Property name="maximumSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
                           <Dimension value="[10, 20]"/>
@@ -580,6 +543,9 @@
                     </Component>
                     <Component class="javax.swing.JLabel" name="zPlanePositionLabel">
                       <Properties>
+                        <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
+                          <Color blue="e0" green="0" red="0" type="rgb"/>
+                        </Property>
                         <Property name="text" type="java.lang.String" value="Z:"/>
                         <Property name="maximumSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
                           <Dimension value="[10, 20]"/>
@@ -591,6 +557,9 @@
                     </Component>
                     <Component class="javax.swing.JSpinner" name="xPlanePositionSpinner">
                       <Properties>
+                        <Property name="maximumSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
+                          <Dimension value="[45, 20]"/>
+                        </Property>
                         <Property name="minimumSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
                           <Dimension value="[45, 20]"/>
                         </Property>
@@ -601,12 +570,29 @@
                     </Component>
                     <Component class="javax.swing.JSpinner" name="yPlanePositionSpinner">
                       <Properties>
+                        <Property name="maximumSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
+                          <Dimension value="[45, 20]"/>
+                        </Property>
+                        <Property name="minimumSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
+                          <Dimension value="[45, 20]"/>
+                        </Property>
                         <Property name="preferredSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
-                          <Dimension value="[30, 20]"/>
+                          <Dimension value="[45, 20]"/>
                         </Property>
                       </Properties>
                     </Component>
                     <Component class="javax.swing.JSpinner" name="zPlanePositionSpinner">
+                      <Properties>
+                        <Property name="maximumSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
+                          <Dimension value="[45, 20]"/>
+                        </Property>
+                        <Property name="minimumSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
+                          <Dimension value="[45, 20]"/>
+                        </Property>
+                        <Property name="preferredSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
+                          <Dimension value="[45, 20]"/>
+                        </Property>
+                      </Properties>
                     </Component>
                   </SubComponents>
                 </Container>
@@ -622,8 +608,8 @@
                   <Layout>
                     <DimensionLayout dim="0">
                       <Group type="103" groupAlignment="0" attributes="0">
-                          <Group type="102" alignment="1" attributes="0">
-                              <EmptySpace max="32767" attributes="0"/>
+                          <Group type="102" alignment="0" attributes="0">
+                              <EmptySpace max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="0" attributes="0">
                                   <Component id="yPlaneRotationLabel" alignment="1" min="-2" pref="28" max="-2" attributes="0"/>
                                   <Component id="zPlaneRotationLabel" alignment="1" min="-2" pref="28" max="-2" attributes="0"/>
@@ -631,7 +617,7 @@
                               </Group>
                               <EmptySpace type="unrelated" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="0" attributes="0">
-                                  <Group type="103" groupAlignment="0" attributes="0">
+                                  <Group type="103" alignment="0" groupAlignment="0" attributes="0">
                                       <Component id="yPlaneRotationSlider" alignment="1" min="-2" max="-2" attributes="0"/>
                                       <Component id="zPlaneRotationSlider" alignment="1" min="-2" max="-2" attributes="0"/>
                                   </Group>
@@ -641,22 +627,22 @@
                               <Group type="103" groupAlignment="0" max="-2" attributes="0">
                                   <Component id="yPlaneRotationSpinner" alignment="1" max="32767" attributes="0"/>
                                   <Component id="zPlaneRotationSpinner" max="32767" attributes="0"/>
-                                  <Component id="xPlaneRotationSpinner" alignment="0" max="32767" attributes="0"/>
+                                  <Component id="xPlaneRotationSpinner" alignment="0" min="-2" max="-2" attributes="0"/>
                               </Group>
-                              <EmptySpace max="-2" attributes="0"/>
+                              <EmptySpace pref="20" max="32767" attributes="0"/>
                           </Group>
                       </Group>
                     </DimensionLayout>
                     <DimensionLayout dim="1">
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Group type="102" alignment="0" attributes="0">
-                              <EmptySpace min="-2" pref="30" max="-2" attributes="0"/>
+                              <EmptySpace min="-2" pref="20" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="1" attributes="0">
-                                  <Group type="102" attributes="0">
+                                  <Group type="102" alignment="1" attributes="0">
                                       <Group type="103" groupAlignment="1" max="-2" attributes="0">
                                           <Component id="xPlaneRotationLabel" max="32767" attributes="0"/>
                                           <Component id="xPlaneRotationSlider" max="32767" attributes="0"/>
-                                          <Component id="xPlaneRotationSpinner" alignment="1" max="32767" attributes="0"/>
+                                          <Component id="xPlaneRotationSpinner" alignment="1" min="-2" max="-2" attributes="0"/>
                                       </Group>
                                       <EmptySpace type="separate" max="-2" attributes="0"/>
                                       <Group type="103" groupAlignment="1" attributes="0">
@@ -672,7 +658,7 @@
                                   <Component id="zPlaneRotationLabel" min="-2" max="-2" attributes="0"/>
                                   <Component id="zPlaneRotationSpinner" min="-2" max="-2" attributes="0"/>
                               </Group>
-                              <EmptySpace pref="31" max="32767" attributes="0"/>
+                              <EmptySpace pref="16" max="32767" attributes="0"/>
                           </Group>
                       </Group>
                     </DimensionLayout>
@@ -782,18 +768,18 @@
                   <Layout>
                     <DimensionLayout dim="0">
                       <Group type="103" groupAlignment="0" attributes="0">
-                          <Group type="102" attributes="0">
-                              <EmptySpace pref="37" max="32767" attributes="0"/>
+                          <Group type="102" alignment="1" attributes="0">
+                              <EmptySpace max="32767" attributes="0"/>
                               <Group type="103" groupAlignment="0" attributes="0">
                                   <Component id="xPlaneSizeLabel" alignment="1" min="-2" max="-2" attributes="0"/>
-                                  <Component id="zPlaneSizeLabel" alignment="1" min="-2" max="-2" attributes="0"/>
+                                  <Component id="yPlaneSizeLabel" alignment="1" min="-2" max="-2" attributes="0"/>
                                   <Component id="rPlaneSizeLabel" alignment="1" min="-2" max="-2" attributes="0"/>
                               </Group>
                               <EmptySpace type="unrelated" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="0" attributes="0">
                                   <Component id="rPlaneSizeSlider" alignment="1" min="-2" max="-2" attributes="0"/>
                                   <Group type="103" alignment="0" groupAlignment="1" attributes="0">
-                                      <Component id="zPlaneSizeSlider" min="-2" max="-2" attributes="0"/>
+                                      <Component id="yPlaneSizeSlider" min="-2" max="-2" attributes="0"/>
                                       <Component id="xPlaneSizeSlider" min="-2" max="-2" attributes="0"/>
                                   </Group>
                               </Group>
@@ -801,16 +787,16 @@
                               <Group type="103" groupAlignment="0" max="-2" attributes="0">
                                   <Component id="yPlaneSizeSpinner" max="32767" attributes="0"/>
                                   <Component id="xPlaneSizeSpinner" max="32767" attributes="0"/>
-                                  <Component id="rPlaneSizeSpinner" max="32767" attributes="0"/>
+                                  <Component id="rPlaneSizeSpinner" min="-2" max="-2" attributes="0"/>
                               </Group>
-                              <EmptySpace max="-2" attributes="0"/>
+                              <EmptySpace min="-2" pref="20" max="-2" attributes="0"/>
                           </Group>
                       </Group>
                     </DimensionLayout>
                     <DimensionLayout dim="1">
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Group type="102" alignment="0" attributes="0">
-                              <EmptySpace min="-2" pref="30" max="-2" attributes="0"/>
+                              <EmptySpace min="-2" pref="20" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="0" attributes="0">
                                   <Component id="rPlaneSizeSlider" min="-2" max="-2" attributes="0"/>
                                   <Component id="rPlaneSizeSpinner" min="-2" max="-2" attributes="0"/>
@@ -824,11 +810,11 @@
                               </Group>
                               <EmptySpace type="separate" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="0" attributes="0">
-                                  <Component id="zPlaneSizeSlider" min="-2" max="-2" attributes="0"/>
+                                  <Component id="yPlaneSizeSlider" min="-2" max="-2" attributes="0"/>
                                   <Component id="yPlaneSizeSpinner" min="-2" max="-2" attributes="0"/>
-                                  <Component id="zPlaneSizeLabel" min="-2" max="-2" attributes="0"/>
+                                  <Component id="yPlaneSizeLabel" min="-2" max="-2" attributes="0"/>
                               </Group>
-                              <EmptySpace pref="31" max="32767" attributes="0"/>
+                              <EmptySpace pref="16" max="32767" attributes="0"/>
                           </Group>
                       </Group>
                     </DimensionLayout>
@@ -851,7 +837,7 @@
                         </Property>
                       </Properties>
                     </Component>
-                    <Component class="javax.swing.JSlider" name="zPlaneSizeSlider">
+                    <Component class="javax.swing.JSlider" name="yPlaneSizeSlider">
                       <Properties>
                         <Property name="preferredSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
                           <Dimension value="[150, 20]"/>
@@ -871,7 +857,7 @@
                         <Property name="text" type="java.lang.String" value="x:"/>
                       </Properties>
                     </Component>
-                    <Component class="javax.swing.JLabel" name="zPlaneSizeLabel">
+                    <Component class="javax.swing.JLabel" name="yPlaneSizeLabel">
                       <Properties>
                         <Property name="text" type="java.lang.String" value="y:"/>
                       </Properties>
@@ -894,6 +880,22 @@
                 </Container>
               </SubComponents>
             </Container>
+            <Component class="javax.swing.JLabel" name="selectPlaneLabel">
+              <Properties>
+                <Property name="text" type="java.lang.String" value="Select a plane type:"/>
+              </Properties>
+            </Component>
+            <Component class="javax.swing.JComboBox" name="planeComboBox">
+              <Properties>
+                <Property name="model" type="javax.swing.ComboBoxModel" editor="org.netbeans.modules.form.editors2.ComboBoxModelEditor">
+                  <StringArray count="3">
+                    <StringItem index="0" value="Circle"/>
+                    <StringItem index="1" value="Square"/>
+                    <StringItem index="2" value="Rectangle"/>
+                  </StringArray>
+                </Property>
+              </Properties>
+            </Component>
           </SubComponents>
         </Container>
       </SubComponents>

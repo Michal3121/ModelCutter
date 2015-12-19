@@ -43,7 +43,7 @@ public class SquaredPlane extends GeneralPlane implements Plane {
 
     @Override
     public Boolean isPointBelongToPlane(Point3f coord) {
-        if(super.isPointBelongToPlane(coord)){
+        if(!super.isPointBelongToPlane(coord)){
             return false;
         } 
         Point2f point2D = super.getCenteredProjectionPoint(coord);
@@ -52,11 +52,11 @@ public class SquaredPlane extends GeneralPlane implements Plane {
     }
     
     private Boolean isPointInSquare(Point2f point, float width){
-        if(point.x > width || point.x < -width){
+        if(point.x > width / 2 || point.x < -width / 2){
             return false;
         }
         
-        if(point.y > width || point.y < -width){
+        if(point.y > width / 2 || point.y < -width / 2){
             return false;
         }
         

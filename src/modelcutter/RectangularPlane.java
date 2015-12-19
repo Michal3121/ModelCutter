@@ -13,7 +13,7 @@ import javax.vecmath.Vector3f;
  *
  * @author MICHAL
  */
-public class RectangularPlane extends GeneralPlane {
+public class RectangularPlane extends GeneralPlane implements Plane {
     
     private float width;
     private float length;
@@ -62,11 +62,11 @@ public class RectangularPlane extends GeneralPlane {
     }
     
     private Boolean isPointInRectangle(Point2f point, float width, float length){
-        if(point.x > width || point.x < -width){
+        if(point.x > width / 2 || point.x < -width / 2){
             return false;
         }
         
-        if(point.y > length || point.y < -length){
+        if(point.y > length / 2 || point.y < -length / 2){
             return false;
         }
         

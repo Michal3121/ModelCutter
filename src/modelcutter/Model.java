@@ -136,7 +136,30 @@ public class Model {
     public double getSizeZ(){
         return this.sizeZmax - this.sizeZmin;
     }
-    
+
+    public double getSizeXmax() {
+        return sizeXmax;
+    }
+
+    public double getSizeXmin() {
+        return sizeXmin;
+    }
+
+    public double getSizeYmax() {
+        return sizeYmax;
+    }
+
+    public double getSizeYmin() {
+        return sizeYmin;
+    }
+
+    public double getSizeZmax() {
+        return sizeZmax;
+    }
+
+    public double getSizeZmin() {
+        return sizeZmin;
+    }
     
     public Point3f getModelCenter(){
         return new Point3f((float) (this.sizeXmax + this.sizeXmin) / 2,(float) (this.sizeYmax + this.sizeYmin) / 2, 
